@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.test.mapper2.TestFTPMapper" >
+ <select id="queryFtpAccount" resultType="java.util.Map" parameterType="map">
+     select * from ftpuser f where f.name= #{userName}
+ </select>
+
+<update id="updateFtpPW" parameterType="map">
+    update ftpuser d set d.password=#{passw} where d.name=#{userName}
+</update>
+
+    <insert id="addFtpAccount" parameterType="map">
+        INSERT ftpuser(NAME ,password) VALUES (#{userName},#{passw})
+    </insert>
+
+</mapper>

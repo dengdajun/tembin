@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.alibabasmt.database.customsmt.mapper.SMTAccountMapper">
+    <select id="selectSmtAccountList" parameterType="map" resultType="com.alibabasmt.domains.querypojos.smtaccount.SmtUserAccountExt">
+        select * from smt_user_account
+    </select>
+</mapper>

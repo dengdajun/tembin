@@ -1,0 +1,169 @@
+package com.base.utils.common;
+
+import com.base.database.customtrading.mapper.SystemLogQueryMapper;
+import com.base.database.userinfo.mapper.SystemLogMapper;
+import com.base.database.userinfo.model.SystemLog;
+import com.base.database.userinfo.model.SystemLogExample;
+import com.base.domains.SessionVO;
+import com.base.domains.querypojos.SystemLogQuery;
+import com.base.mybatis.page.Page;
+import com.base.utils.applicationcontext.ApplicationContextUtil;
+import com.base.utils.applicationcontext.RequestResponseContext;
+import com.base.utils.cache.SessionCacheSupport;
+import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.log4j.Logger;
+
+import javax.servlet.http.HttpServletRequest;
+import java.net.InetAddress;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Created by Administrator on 2014/10/14.
+ * 记录系统日志，包括用户操作等等
+ */
+public class SystemLogUtils {
+    static Logger logger = Logger.getLogger(SystemLogUtils.class);
+
+    public static final String FIND_PASSWORD="findPassword";//找回密码事件
+    public static final String NO_API_Message="noApiMessage";//不系统通知的时候记录失败日志
+    public static final String ORDER_OPERATE_RECORD="orderOperateRecord";//订单操作记录
+    public static final String ORDER_OPERATE_RECORD_REFUND="orderOperateRecordRefund";//订单退款操作记录
+    public static final String AUTO_ASSESS="autoAssess";//自动发送评价
+    public static final String ITEM_INFORMATION_TYPE="itemInformationType";//保存本地数据库没有的商品分类
+    public static final String USER_LOGIN_LOG="user_login_log";//登陆日志
+    public static final String USER_UNLOGIN_LOG="user_unlogin_log";//退出日志
+    public static final String EBAY_ACCOUNT_CHANGE_LOG="ebay_account_change_log";//退出日志
+    public static final String PICTURE_MANAGER_DELETE="picture_manager_delete";//图片管理图片删除日志
+    public static final String LISTING_ITEM_DO="ListingItemdo";//立即刊登
+    public static final String LISTING_ITEM_TIMER="ListingItemTimer";//定时刊登
+    public static final String ModuleModifyEvent="ModuleModifyEvent";//模块修改日志
+    /**祝需要传入三个值
+     * log.setEventname();
+     log.setOperuser();
+     log.setEventdesc();*/
+    public static void saveLog(SystemLog systemLog)  {
+        SessionVO sessionVO= SessionCacheSupport.getSessionVO();
+        systemLog.setOperuser(sessionVO!=null?sessionVO.getLoginId():systemLog.getOperuser());
+        systemLog.setCreatedate(new Date());
+
+        SystemLogMapper systemLogMapper = (SystemLogMapper) ApplicationContextUtil.getBean(SystemLogMapper.class);
+        try {
+            HttpServletRequest request=RequestResponseContext.getRequest();
+            if(request!=null){
+                String ip=getIpAddr(request);
+                systemLog.setOther(ip);
+                systemLog.setEventdesc(systemLog.getEventdesc()+";客户端ip是:"+ip);
+            }
+            systemLogMapper.insert(systemLog);
+        } catch (Exception e) {
+            //logger.error("日志报错！重新尝试"+systemLog.getEventdesc(),e);
+            systemLog.setEventdesc(StringEscapeUtils.escapeXml(systemLog.getEventdesc()));
+            try {
+                systemLogMapper.insert(systemLog);
+            } catch (Exception e1) {
+                logger.error("日志报错！"+systemLog.getEventdesc(),e);
+                //throw new Exception("日志报错错误",e1);
+            }
+        }
+    }
+
+    /**
+     * 更新systemLog
+     * @param systemLog
+     * @throws Exception
+     */
+    public static void updateSystemLog(SystemLog systemLog) throws Exception {
+        SystemLogMapper systemLogMapper = (SystemLogMapper) ApplicationContextUtil.getBean(SystemLogMapper.class);
+        systemLogMapper.updateByPrimaryKeySelective(systemLog);
+    }
+
+    /**
+     * 删除日志
+     * @param id
+     * @throws Exception
+     */
+    public static void deleteSystemLog(long id) throws Exception {
+        SystemLogMapper systemLogMapper = (SystemLogMapper) ApplicationContextUtil.getBean(SystemLogMapper.class);
+        systemLogMapper.deleteByPrimaryKey(id);
+    }
+
+    /**获取ip*/
+    public static String getIpAddr(HttpServletRequest request) throws Exception {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("Proxy-Client-IP");
+        }
+
+        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("WL-Proxy-Client-IP");
+        }
+
+        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_CLIENT_IP");
+        }
+
+        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_X_FORWARDED_FOR");
+        }
+
+        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+
+        if(ip != null && ip.equalsIgnoreCase("0:0:0:0:0:0:0:1"))
+        {
+            ip = InetAddress.getLocalHost().getHostAddress().toString();
+        }
+
+        if (ip == null || ip.length() == 0 || "X-Real-IP".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("X-Real-IP");
+        }
+        return ip;
+
+    }
+    public static List<SystemLogQuery> selectSystemLogList(Map map,Page page){
+        SystemLogQueryMapper systemLogQueryMapper = (SystemLogQueryMapper) ApplicationContextUtil.getBean(SystemLogQueryMapper.class);
+        List<SystemLogQuery> list=systemLogQueryMapper.selectSystemLogList(map,page);
+        return list;
+    }
+    public static List<SystemLog> selectSystemLogByEventnameAndEventdesc(String eventName,String eventDesc){
+        SystemLogMapper systemLogMapper = (SystemLogMapper) ApplicationContextUtil.getBean(SystemLogMapper.class);
+        SystemLogExample example=new SystemLogExample();
+        SystemLogExample.Criteria cr=example.createCriteria();
+        cr.andEventnameEqualTo(eventName);
+        cr.andEventdescEqualTo(eventDesc);
+        List<SystemLog> list=systemLogMapper.selectByExample(example);
+        return list;
+    }
+
+    public static SystemLog selectSystemLogByUserId(String eventName,String userid){
+        SystemLogMapper systemLogMapper = (SystemLogMapper) ApplicationContextUtil.getBean(SystemLogMapper.class);
+        SystemLogExample example=new SystemLogExample();
+        SystemLogExample.Criteria cr=example.createCriteria();
+        cr.andEventnameEqualTo(eventName);
+        cr.andOperuserEqualTo(userid);
+        List<SystemLog> list=systemLogMapper.selectByExample(example);
+        if(list==null||list.size()==0){
+            return null;
+        }else{
+            return list.get(0);
+        }
+    }
+    public static SystemLog selectSystemLogByTableId(String eventName,Long tableId){
+        SystemLogMapper systemLogMapper = (SystemLogMapper) ApplicationContextUtil.getBean(SystemLogMapper.class);
+        SystemLogExample example=new SystemLogExample();
+        example.setOrderByClause("createDate");
+        SystemLogExample.Criteria cr=example.createCriteria();
+        cr.andEventnameEqualTo(eventName);
+        cr.andTableIdEqualTo(tableId);
+        List<SystemLog> list=systemLogMapper.selectByExample(example);
+        if(list==null||list.size()==0){
+            return null;
+        }else{
+            return list.get(0);
+        }
+    }
+
+}

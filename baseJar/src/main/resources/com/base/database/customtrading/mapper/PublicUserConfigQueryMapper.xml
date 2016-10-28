@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.base.database.customtrading.mapper.PublicUserConfigQueryMapper">
+  <resultMap id="BaseResultMap" type="com.base.domains.querypojos.PublicUserConfigQuery">
+      <id column="id" jdbcType="BIGINT" property="id" />
+      <result column="config_type" jdbcType="VARCHAR" property="configType" />
+      <result column="config_name" jdbcType="VARCHAR" property="configName" />
+      <result column="config_value" jdbcType="VARCHAR" property="configValue" />
+      <result column="create_date" jdbcType="TIMESTAMP" property="createDate" />
+      <result column="user_id" jdbcType="BIGINT" property="userId" />
+      <result column="item_level" jdbcType="VARCHAR" property="itemLevel" />
+      <result column="item_parent_id" jdbcType="VARCHAR" property="itemParentId" />
+  </resultMap>
+
+    <select id="selectByPublicUserConfigQueryList" resultMap="BaseResultMap" parameterType="map">
+      select * from public_user_config ucon left join usercontroller_user us on ucon.user_id=us.user_org_id where
+      ucon.config_type='autoAssessType' and ucon.config_value!='1'
+      and (us.user_parent_id is null or us.user_parent_id ='') and us.status='1'
+    </select>
+</mapper>

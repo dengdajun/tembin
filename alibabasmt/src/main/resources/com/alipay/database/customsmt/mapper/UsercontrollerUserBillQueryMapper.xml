@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.alipay.database.customsmt.mapper.UsercontrollerUserBillQueryMapper">
+    <resultMap id="BaseResultMap" type="com.alipay.domains.querypojos.UsercontrollerUserBillQuery">
+        <id column="id" jdbcType="INTEGER" property="id" />
+        <result column="bill_souce" jdbcType="VARCHAR" property="billSouce" />
+        <result column="bill_source_id" jdbcType="INTEGER" property="billSourceId" />
+        <result column="bill_type" jdbcType="VARCHAR" property="billType" />
+        <result column="costs_type" jdbcType="VARCHAR" property="costsType" />
+        <result column="costs_target" jdbcType="VARCHAR" property="costsTarget" />
+        <result column="costs_date" jdbcType="VARCHAR" property="costsDate" />
+        <result column="amount" jdbcType="DECIMAL" property="amount" />
+        <result column="user_id" jdbcType="INTEGER" property="userId" />
+        <result column="status" jdbcType="VARCHAR" property="status" />
+        <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+        <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+        <result column="accName" jdbcType="VARCHAR" property="accName" />
+    </resultMap>
+    <select id="selectUserBillQuery" resultMap="BaseResultMap" parameterType="map">
+        select bill.*,
+        (CASE WHEN bill.costs_type='subUser' THEN (select us.user_login_id from usercontroller_user us where us.user_id=bill.costs_target limit 1)
+        WHEN bill.costs_type='ebayAccount' THEN (select ebay.ebay_name from usercontroller_ebay_account ebay where ebay.id=bill.costs_target limit 1)
+        END) as accName
+        from usercontroller_user_bill bill where 1=1
+        <if test="userId!=null">
+            and user_id = #{userId}
+        </if>
+    </select>
+    <select id="selectUserBillFee" resultType="com.alipay.domains.querypojos.UsercontrollerUserBillQuery" parameterType="map">
+        select sum(amount) amount from usercontroller_user_bill where 1=1
+        <if test="userId!=null">
+            and user_id = #{userId}
+        </if>
+    </select>
+
+    <select id="selectUserBillTypeQuery" resultMap="BaseResultMap" parameterType="map">
+        select id, bill_souce, bill_source_id, bill_type, amount, user_id, create_time from usercontroller_user_bill  where 1=1
+        <if test="billType!=null">
+            and bill_type = #{billType}
+        </if>
+        <if test="userId!=null">
+            and user_id = #{userId}
+        </if>
+        <if test="startDate!=null">
+            and create_time > #{startDate}
+        </if>
+        ORDER BY create_time desc
+    </select>
+</mapper>

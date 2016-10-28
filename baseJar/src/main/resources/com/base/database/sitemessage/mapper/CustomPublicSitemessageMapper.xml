@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.base.database.sitemessage.mapper.CustomPublicSitemessageMapper" >
+  <resultMap id="BaseResultMap" type="com.base.database.sitemessage.model.CustomPublicSitemessage" >
+
+    <id column="id" property="id" jdbcType="BIGINT" />
+    <result column="message_to" property="messageTo" jdbcType="BIGINT" />
+    <result column="message_type" property="messageType" jdbcType="VARCHAR" />
+    <result column="message_from" property="messageFrom" jdbcType="VARCHAR" />
+    <result column="create_time" property="createTime" jdbcType="TIMESTAMP" />
+    <result column="readed" property="readed" jdbcType="VARCHAR" />
+    <result column="message" property="message" jdbcType="LONGVARCHAR" />
+      <result column="message_id" jdbcType="VARCHAR" property="messageId" />
+      <result column="message_title" property="messageTitle" jdbcType="VARCHAR" />
+      <result column="fromName" property="fromName" jdbcType="VARCHAR" />
+      <result column="toName" property="toName" jdbcType="VARCHAR" />
+
+  </resultMap>
+
+<select id="selectSiteMessageList" parameterType="map" resultMap="BaseResultMap">
+    select m.id,m.message_to,m.message_from,m.message_type,m.create_time,m.readed,m.message_title,m.message,
+    fu.user_name fromName,tu.user_name toName from public_sitemessage m
+    LEFT JOIN usercontroller_user fu on fu.user_id=m.message_from
+    LEFT JOIN usercontroller_user tu on tu.user_id=m.message_to
+    where 1=1 and m.message_type!="feed_back_message"
+    <if test="messageTo!=null">
+       and m.message_to = #{messageTo}
+    </if>
+    <if test="messageType!=null">
+        and (m.message_type = CONCAT(#{messageType},'_SUCCESS') or m.message_type = CONCAT(#{messageType},'_FAIL'))
+    </if>
+    <if test="messageFrom!=null">
+        and m.message_from = #{messageFrom}
+    </if>
+    <if test="readed!=null">
+        and m.readed = #{readed}
+    </if>
+    order by m.create_time desc
+</select>
+    <select id="selectSiteMessageList1" parameterType="map" resultMap="BaseResultMap">
+        select m.id,m.message_to,m.message_from,m.message_type,m.create_time,m.readed,m.message_title,m.message,m.message_id,
+        fu.user_login_id fromName,tu.user_login_id toName from public_sitemessage m
+        LEFT JOIN usercontroller_user fu on fu.user_id=m.message_from
+        LEFT JOIN usercontroller_user tu on tu.user_id=m.message_to
+        where 1=1
+        <if test="messageTo!=null">
+                and (m.message_to = #{messageTo} or m.message_from = #{messageTo})
+        </if>
+        <if test="messageType!=null">
+            and m.message_type = #{messageType}
+        </if>
+        <if test="readed!=null">
+            and m.readed = #{readed}
+        </if>
+        group by m.message_id
+        order by m.create_time desc
+    </select>
+    <select id="fetchSiteMessageById" parameterType="com.base.database.sitemessage.model.PublicSitemessage" resultMap="BaseResultMap">
+        select m.*,
+        fu.user_name fromName,tu.user_name toName from public_sitemessage m
+        LEFT JOIN usercontroller_user fu on fu.user_id=m.message_from
+        LEFT JOIN usercontroller_user tu on tu.user_id=m.message_to
+        where m.id = #{id} and m.message_to = #{messageTo}
+    </select>
+    
+    <select id="countSiteMessage" parameterType="map" resultType="com.base.database.sitemessage.model.SiteMessageCountVO">
+        select m.message_type mtype,count(1) mnum from public_sitemessage m
+        where (m.readed is null or m.readed='0') and m.message_to=#{mToId}
+        GROUP BY m.message_type
+    </select>
+    
+    <update id="updateReadedMessage" parameterType="map">
+        update public_sitemessage ps set ps.readed=1
+        where ps.message_to=#{mToId} and ps.readed=0
+
+        <if test="idArray!=null">
+          and ps.id in
+            <foreach item="item" index="index" collection="idArray" open="("	separator="," close=")">
+              #{item,jdbcType=DECIMAL}
+            </foreach>
+        </if>
+
+    </update>
+    <select id="selectPublicSitemessageByMessageId" parameterType="map" resultMap="BaseResultMap">
+        select m.id,m.message_to,m.message_from,m.message_type,m.create_time,m.readed,m.message_title,m.message,m.message_id,
+        fu.user_login_id fromName,tu.user_login_id toName from public_sitemessage m
+        LEFT JOIN usercontroller_user fu on fu.user_id=m.message_from
+        LEFT JOIN usercontroller_user tu on tu.user_id=m.message_to
+          where 1=1
+          <if test="messageFrom!=null">
+              and (m.message_from=#{messageFrom} or m.message_to=#{messageFrom})
+          </if>
+           <if test="messageTo!=null">
+              and (m.message_from=#{messageTo} or m.message_to=#{messageTo})
+           </if>
+           <if test="messageId!=null">
+                and m.message_id =#{messageId}
+           </if>
+        order by m.create_time
+    </select>
+
+</mapper>

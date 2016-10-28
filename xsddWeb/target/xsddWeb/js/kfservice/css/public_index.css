@@ -1,0 +1,46 @@
+@charset "utf-8";
+/* CSS Document */
+html,body,div,dl,dt,dd,ul,ol,li,h1,h2,h3,h4,h5,h6,pre,input,p,blockquote,th,td,form,p{margin:0;padding:0;}
+body,html{_background-image:url(about:blank);_background-attachment:fixed;}
+ol,ul,li,dd,dt,dl{list-style:none;}
+img{border:0;}
+input,select,textarea{font-size:12px; color:#333; font-family:'lucida grande',taho,verdana,'trebuchet ms',"宋体",sans-serif;}
+html{text-align:center;background:#F7F7F7;}
+body{min-width:950px;text-align:left; font:12px/1.5em \5B8B\4F53,Arial,Helvetica,sans-serif; color:#333;}
+:focus{outline:none;}
+em,th{font-style:normal;font-weight:normal;}
+.table{border-collapse:collapse;border-spacing:0;empty-cells:show;}
+
+ 
+ 
+
+/*-- 在线客服 --*/
+.box_os{ height:auto; overflow:hidden; width:106px;position:fixed;right:0;top:300px;_position:absolute; z-index:9999;}
+.box_os .os_x{ width:13px; height:17px; margin-right:1px; float:right; display:inline; background:url(http://i1.umivi.net/v/static/dianbo/images/os20120725.gif) no-repeat; cursor:pointer;}
+.box_os .osqq{ width:104px; border:1px solid #D1D1D1; background:#F0F0F0 url(http://i1.umivi.net/v/static/dianbo/images/os20120725.gif) no-repeat 0 -101px; clear:both; padding:35px 0 8px 0; text-align:center;}
+.box_os .osqq p{ height:auto; line-height:20px;width:104px; margin-top:8px;}
+.box_os .osqq p strong{ color:#666;}
+.box_os .osqq img{ padding:7px 0 3px 0;}
+.box_os .osqq p em{ color:#999; display:block;}
+.box_os .osqq p span{ color:#547816; display:block;}
+.onlineService{ display:none; width:25px; height:97px; background:url(http://i1.umivi.net/v/static/dianbo/images/os20120725.gif) no-repeat -80px 0; cursor:pointer;position:fixed;right:0;top:300px;_position:absolute;}
+.box_os .osqq p span a{color:#547816;}
+
+.box_os .os_x, .box_os .osqq, .ico_os, .ico_gt, .ico_pp, .osqq .qq{ background:url(images/kf.gif) no-repeat;}
+.box_os{ height:auto; overflow:hidden; width:131px; position:fixed; left:0; top:80%; _position:absolute; z-index:9999;display:none;}
+.box_os .os_x{ background-color:#f7f7f7; background-position:2px 2px; width:18px; height:20px; float:right; display:inline; cursor:pointer;}
+.box_os .osqq{ width:129px; border:1px solid #D1D1D1; background-color:#fff; background-position:0 -120px; clear:both; padding:37px 0 8px 0; text-align:center;}
+.box_os .osqq p{ height:auto; line-height:20px;width:129px; margin-top:8px;}
+.box_os .osqq p strong{ color:#666;}
+.box_os .osqq img{ padding:7px 0 3px 0;}
+.box_os .osqq p em{ color:#999; display:block;}
+.box_os .osqq p span{ color:#547816; display:block;}
+.box_os .osqq .qq{ background-position:-140px -120px; display:block; width:99px; height:26px; margin:0 auto; margin-top:8px; cursor:pointer;}
+.acbox{ width:130px; overflow:hidden;}
+.acbox .ico_gt{ background-position:-60px 0; border:1px solid #299ec0; border-top:0; cursor:pointer; width:60px; height:33px; float:right;}
+.acbox .ico_pp{ background-position:-60px -60px; border:1px solid #81b140; border-top:0; cursor:pointer; width:60px; height:33px; float:right; margin:0 2px;}
+.onlineService{ background:none; display:none; width:39px; *width:84px; height:178px; ;position:fixed; left:0; top:80%; _position:absolute;}
+.onlineService .ico_os{ background-position:-2px -20px; border:1px solid #c7c7c7; cursor:pointer; width:39px; height:98px; float:right;}
+.onlineService .ico_gt{ background-position:right 0; border:1px solid #299ec0; cursor:pointer; width:39px; height:37px; float:right; clear:both;}
+.onlineService .ico_pp{ background-position:right -60px; border:1px solid #81b140; cursor:pointer; width:39px; height:37px; float:right; margin:0 0 1px 0; clear:both;}
+.box_os .osqq p span a{color:#557917;}

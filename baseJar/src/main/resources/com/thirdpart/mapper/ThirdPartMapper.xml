@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.thirdpart.mapper.ThirdPartMapper" >
+
+<select id="findSessionVO4ThirdPart" resultType="com.base.domains.SessionVO" parameterType="map">
+    select u.user_id id,u.user_login_id loginId,u.user_email email,
+        u.user_name userName,u.user_org_id orgId,org.org_name orgName,
+        u.user_parent_id parentId,u.`status`,u.default_dev_account defaultDevID
+         from usercontroller_user u
+        INNER JOIN usercontroller_org org on org.org_id=u.user_org_id
+        where u.user_login_id = #{loginId}   and u.third_part_mark=#{thirdPartMark}
+</select>
+
+    <select id="findUserByKey" parameterType="map" resultType="com.thirdpart.vo.AccessKeyVO">
+        select u.user_login_id user from usercontroller_user_third_mark t INNER JOIN usercontroller_user u ON t.user_id=u.user_id
+        WHERE t.mark=#{userMark} and u.third_part_mark=#{thirdMark}
+    </select>
+
+</mapper>

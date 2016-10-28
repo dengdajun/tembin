@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/alibabasmt/alibabasmt.iml" filepath="$PROJECT_DIR$/alibabasmt/alibabasmt.iml" />
+      <module fileurl="file://$PROJECT_DIR$/baseJar/baseJar.iml" filepath="$PROJECT_DIR$/baseJar/baseJar.iml" />
+      <module fileurl="file://$PROJECT_DIR$/rootPom.iml" filepath="$PROJECT_DIR$/rootPom.iml" />
+      <module fileurl="file://$PROJECT_DIR$/xsddWeb/xsddWeb.iml" filepath="$PROJECT_DIR$/xsddWeb/xsddWeb.iml" />
+    </modules>
+  </component>
+</project>

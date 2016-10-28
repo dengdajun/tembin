@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.base.userinfo.mapper.UserInfoServiceMapper" >
+ <select id="queryUserRole" resultType="com.base.domains.RoleVO" parameterType="map">
+    SELECT ur.role_id roleID ,r.role_name roleName,r.create_user createUser from usercontroller_user_role ur
+    INNER JOIN usercontroller_role r on ur.role_id=r.role_id
+    WHERE ur.user_id=(select u.user_id from usercontroller_user u where u.user_email=#{loginId})
+ </select>
+
+    <select id="queryAllPermission" resultType="com.base.domains.PermissionVO" parameterType="map" >
+        select p.permission_id permissionID,p.permission_value permissionURL,p.permission_name permissionName ,
+        p.permission_level permissionLevel,p.permission_parent_id parentID,p.menu_class menuClass
+        from usercontroller_permission p
+        <if test="trueall==null">
+            WHERE p.permission_id not in(8,15)
+        </if>
+
+        ORDER BY p.permission_level ,p.permission_id
+    </select>
+
+    <select id="queryPermissionByRoleID" resultType="com.base.domains.PermissionVO" parameterType="map" >
+        select * from (
+        select p.permission_id permissionID,p.permission_value permissionURL,p.permission_name permissionName ,
+        p.permission_level permissionLevel,p.permission_parent_id parentID,p.menu_class menuClass,menu_order_num
+        from usercontroller_role_permission rp
+        INNER JOIN usercontroller_permission p on rp.permission_id=p.permission_id
+        where rp.role_id in
+        <foreach item="item" index="index" collection="idArray" open="("	separator="," close=")">
+            #{item.roleID,jdbcType=DECIMAL}
+        </foreach>
+        and p.permission_level != '1'
+
+        UNION ALL
+        select p.permission_id permissionID,p.permission_value permissionURL,p.permission_name permissionName ,
+        p.permission_level permissionLevel,p.permission_parent_id parentID,p.menu_class menuClass,menu_order_num
+        from usercontroller_permission p
+        where p.permission_level='1'
+        ) dd order by dd.menu_order_num asc , dd.permissionID asc
+    </select>
+    
+    <select id="querySessionVOInfo" parameterType="com.base.domains.LoginVO" resultType="com.base.domains.SessionVO">
+        select u.user_id id,u.user_login_id loginId,u.user_email email,u.tel_phone telPhone,
+        u.user_name userName,u.user_org_id orgId,org.org_name orgName,
+        u.user_parent_id parentId,u.`status`,u.default_dev_account defaultDevID
+         from usercontroller_user u
+        INNER JOIN usercontroller_org org on org.org_id=u.user_org_id
+        where u.user_login_id = #{loginId}   and u.user_password=#{enpassword}
+    </select>
+
+
+    <select id="queryEbayAccountForUser" parameterType="map" resultType="com.base.domains.userinfo.UsercontrollerEbayAccountExtend">
+        select * from (
+        select DISTINCT ebay.id id, ebay.user_id userId, ebay.ebay_name ebayName,
+        ebay.paypal_account_id paypalAccountId, ebay.create_user createUser,
+        ebay.create_time createTime, ebay.uuid uuid,ebay.ebay_token ebayToken,
+        paypal.paypal_account paypalName,ebay.ebay_name_code ebayNameCode,ebay.ebay_status ebayStatus,
+        ebay.use_time_start useTimeStart,ebay.use_time_end useTimeEnd,
+        inf.FeedbackScore feedBackNum,inf.PositiveFeedbackPercent perFeedBack
+        from usercontroller_user_ebay ue
+        left join usercontroller_ebay_account ebay on ebay.id=ue.ebay_id
+        left join usercontroller_paypal_account paypal on ebay.paypal_account_id =  paypal.id
+        LEFT JOIN usercontroller_ebay_account_info inf on inf.eBay_ID=ue.ebay_id
+        where ue.user_id=#{userID}
+        <if test="resultNum==null">
+            and ebay.ebay_status=1
+        </if>
+        ) aa where aa.id is not null
+    </select>
+
+    <select id="queryAllEbayAccountForUser" parameterType="map" resultType="com.base.domains.userinfo.UsercontrollerEbayAccountExtend">
+        select * from (
+        select DISTINCT ebay.id id, ebay.user_id userId, ebay.ebay_name ebayName,
+        ebay.paypal_account_id paypalAccountId, ebay.create_user createUser,
+        ebay.create_time createTime, ebay.uuid uuid,ebay.ebay_token ebayToken,
+        paypal.paypal_account paypalName,ebay.ebay_name_code ebayNameCode,ebay.ebay_status ebayStatus,
+        ebay.use_time_start useTimeStart,ebay.use_time_end useTimeEnd
+        from usercontroller_ebay_account ebay
+        left join usercontroller_user_ebay ue on ebay.id=ue.ebay_id
+        left join usercontroller_paypal_account paypal on ebay.paypal_account_id =  paypal.id
+        where ebay.user_id=#{userID}
+        <if test="resultNum==null">
+            and ebay.ebay_status=1
+        </if>
+        ) aa where aa.id is not null
+    </select>
+    
+    
+    <resultMap id="ebayToken" type="com.base.database.trading.model.UsercontrollerEbayAccount">
+        <result column="ebay_token" jdbcType="LONGVARCHAR" property="ebayToken" />
+        <result column="user_id" jdbcType="LONGVARCHAR" property="userId" />
+        <result column="ebay_name" jdbcType="VARCHAR" property="ebayName" />
+        <result column="id" jdbcType="BIGINT" property="id" />
+    </resultMap>
+    <select id="getTokenByEbayID" parameterType="java.lang.Long" resultMap="ebayToken">
+        select e.id,e.ebay_token,e.user_id,e.ebay_name from usercontroller_ebay_account e where e.id = #{id}
+    </select>
+    
+    <select id="ebayIsBindDev" parameterType="map" resultType="int">
+        select count(1) from usercontroller_ebay_dev ed where ed.ebay_account_id = #{ebayID} and ed.dev_account_id=#{devID}
+    </select>
+
+    <select id="queryAllDevAccount" resultType="com.base.database.trading.model.UsercontrollerDevAccount">
+        select dev.id ,dev.dev_user devUser from Usercontroller_Dev_Account dev
+    </select>
+
+    <resultMap id="BaseResultMap" type="com.base.database.trading.model.UsercontrollerDevAccount" >
+        <id column="id" property="id" jdbcType="BIGINT" />
+        <result column="dev_user" property="devUser" jdbcType="VARCHAR" />
+        <result column="API_DEV_NAME" property="apiDevName" jdbcType="VARCHAR" />
+        <result column="API_APP_NAME" property="apiAppName" jdbcType="VARCHAR" />
+        <result column="API_CERT_NAME" property="apiCertName" jdbcType="VARCHAR" />
+        <result column="API_COMPATIBILITY_LEVEL" property="apiCompatibilityLevel" jdbcType="VARCHAR" />
+        <result column="runName" property="runname" jdbcType="VARCHAR" />
+    </resultMap>
+    <select id="getDevByOrder" resultMap="BaseResultMap" parameterType="map" >
+        select
+        id, dev_user, API_DEV_NAME, API_APP_NAME, API_CERT_NAME, API_COMPATIBILITY_LEVEL,runName
+        from usercontroller_dev_account where
+        max_num is null or use_num &lt; max_num
+        order by use_num asc limit 1
+    </select>
+    <update id="addUseNum" parameterType="map">
+        update usercontroller_dev_account set use_num=use_num+1 where id=#{id}
+    </update>
+    <update id="initUseNum" parameterType="map">
+        update usercontroller_dev_account set use_num=0,use_date=#{udate}
+    </update>
+
+</mapper>

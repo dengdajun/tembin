@@ -1,0 +1,1194 @@
+package com.iteminformation.controller;
+
+import com.baidu.ueditor.upload.StorageManager;
+import com.base.database.publicd.model.*;
+import com.base.database.trading.model.*;
+import com.base.database.userinfo.model.SystemLog;
+import com.base.domains.CommonParmVO;
+import com.base.domains.SessionVO;
+import com.base.domains.querypojos.ItemInformationQuery;
+import com.base.domains.querypojos.ListingDataQuery;
+import com.base.domains.userinfo.UsercontrollerEbayAccountExtend;
+import com.base.domains.userinfo.UsercontrollerUserExtend;
+import com.base.mybatis.page.Page;
+import com.base.mybatis.page.PageJsonBean;
+import com.base.userinfo.service.SystemUserManagerService;
+import com.base.utils.annotations.AvoidDuplicateSubmission;
+import com.base.utils.applicationcontext.ApplicationContextUtil;
+import com.base.utils.cache.DataDictionarySupport;
+import com.base.utils.cache.SessionCacheSupport;
+import com.base.utils.common.*;
+import com.base.utils.cxfclient.CXFPostClient;
+import com.base.utils.ftpabout.service.FTPservice;
+import com.base.utils.imageManage.service.ImageService;
+import com.common.base.utils.ajax.AjaxResponse;
+import com.common.base.utils.ajax.AjaxSupport;
+import com.common.base.web.BaseAction;
+import com.publicd.service.*;
+import com.trading.service.ITradingAttrMores;
+import com.trading.service.ITradingItem;
+import com.trading.service.ITradingPictureDetails;
+import com.trading.service.ITradingTemplateInitTable;
+import org.apache.commons.lang.StringUtils;
+import org.apache.poi.util.HexDump;
+import org.apache.poi.util.LittleEndian;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.ModelMap;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.util.HtmlUtils;
+
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.File;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.util.*;
+
+/**
+ * Created by Administrtor on 2014/9/4.
+ */
+@Controller
+@RequestMapping("information")
+public class ItemInformationController extends BaseAction {
+    @Autowired
+    private IPublicItemInformation iPublicItemInformation;
+    @Autowired
+    private IPublicUserConfig iPublicUserConfig;
+    @Autowired
+    private IPublicItemSupplier iPublicItemSupplier;
+    @Autowired
+    private IPublicItemCustom iPublicItemCustom;
+    @Autowired
+    private IPublicItemInventory iPublicItemInventory;
+    @Autowired
+    private IPublicItemPictureaddrAndAttr iPublicItemPictureaddrAndAttr;
+    @Autowired
+    private SystemUserManagerService systemUserManagerService;
+    @Autowired
+    private ImageService imageService;
+    @Autowired
+    private ITradingTemplateInitTable iTradingTemplateInitTable;
+    @Value("${IMAGE_URL_PREFIX}")
+    private String imageUrlPrefix;//图片服务器的ip
+    @Value("${IMG_MANAGER_WS_URL}")
+    private String imgManagerWsUrl;
+    @Autowired
+    private FTPservice ftPservice;
+    @Autowired
+    private ITradingItem iTradingItem;
+    @Autowired
+    private ITradingPictureDetails iTradingPictureDetails;
+    @Autowired
+    private ITradingAttrMores iTradingAttrMores;
+
+
+    /*
+   *纠纷列表
+   */
+    @RequestMapping("/itemInformationList.do")
+    public ModelAndView itemInformationList(HttpServletRequest request,HttpServletResponse response,ModelMap modelMap){
+        SessionVO sessionVO= SessionCacheSupport.getSessionVO();
+        Boolean adminFlag=systemUserManagerService.isAdminRole();
+        List<PublicUserConfig> remarks=iPublicUserConfig.selectUserConfigByItemType("remark",sessionVO.getId());
+        if(adminFlag){
+            List<UsercontrollerUserExtend> orgUsers=systemUserManagerService.queryAllUsersByOrgID("yes");
+            for(UsercontrollerUserExtend user:orgUsers){
+                if(user.getUserId()!=sessionVO.getId()){
+                    List<PublicUserConfig> remarks1=iPublicUserConfig.selectUserConfigByItemType("remark", Long.valueOf(user.getUserId()));
+                    if(remarks1!=null&&remarks1.size()>0){
+                        remarks.addAll(remarks1);
+                    }
+                }
+            }
+        }
+        modelMap.put("remarks",remarks);
+        return forword("/itemInformation/itemInformation",modelMap);
+    }
+    /**获取list数据的ajax方法*/
+    @RequestMapping("/ajax/loadRemarks.do")
+    @ResponseBody
+    public void loadRemarks(CommonParmVO commonParmVO,HttpServletRequest request) throws Exception {
+        SessionVO sessionVO= SessionCacheSupport.getSessionVO();
+        List<PublicUserConfig> remarks=iPublicUserConfig.selectUserConfigByItemType("remark",sessionVO.getId());
+        AjaxSupport.sendSuccessText("",remarks);
+    }
+    /**获取list数据的ajax方法*/
+    @RequestMapping("/ajax/loadItemInformationList.do")
+    @ResponseBody
+    public void loadItemInformationList(CommonParmVO commonParmVO,HttpServletRequest request) throws Exception {
+        /**分页组装*/
+        String remark=request.getParameter("remark");
+        String information=request.getParameter("information");
+        String itemType=request.getParameter("itemType");
+        String content=request.getParameter("content");
+        String comment=request.getParameter("comment");
+        if("all".equals(remark)||!StringUtils.isNotBlank(remark)){
+            remark=null;
+        }
+        if("all".equals(comment)||!StringUtils.isNotBlank(comment)){
+            comment=null;
+        }
+        if("all".equals(information)||!StringUtils.isNotBlank(information)){
+            information=null;
+        }
+        if("all".equals(itemType)||!StringUtils.isNotBlank(itemType)){
+            itemType=null;
+        }
+        if(!StringUtils.isNotBlank(content)){
+            content=null;
+        }
+        Map m = new HashMap();
+        SessionVO sessionVO=SessionCacheSupport.getSessionVO();
+        Boolean adminFlag=systemUserManagerService.isAdminRole();
+        m.put("remark",remark);
+        m.put("information",information);
+        m.put("itemType",itemType);
+        m.put("content",content);
+        m.put("comment",comment);
+       /* if(adminFlag){*/
+            List<UsercontrollerUserExtend> orgUsers=systemUserManagerService.queryAllUsersByOrgID("yes");
+            UsercontrollerUserExtend admin=new UsercontrollerUserExtend();
+            admin.setUserId((int) sessionVO.getId());
+            orgUsers.add(admin);
+            m.put("orgUsers",orgUsers);
+            m.put("adminFlag","true");
+       /* }else{
+            m.put("adminFlag","false");
+        }*/
+        if(sessionVO!=null){
+            m.put("userID",sessionVO.getId());
+        }else{
+            m.put("userID",null);
+        }
+        PageJsonBean jsonBean=commonParmVO.getJsonBean();
+        Page page=jsonBean.toPage();
+        List<ItemInformationQuery> lists=iPublicItemInformation.selectItemInformation(m,page);
+        for(ItemInformationQuery query:lists){
+            if(query.getRemark()!=null){
+                List<PublicItemPictureaddrAndAttr> remarks=iPublicItemPictureaddrAndAttr.selectPictureaddrAndAttrByInformationId(query.getId(),"remark");
+                String remark1="";
+                for(PublicItemPictureaddrAndAttr attr:remarks){
+                    PublicUserConfig config=iPublicUserConfig.selectUserConfigById(attr.getRemarkId());
+                    remark1+=config.getConfigName()+",";
+                }
+                query.setRemark(remark1);
+            }
+        }
+        jsonBean.setList(lists);
+        jsonBean.setTotal((int)page.getTotalCount());
+        AjaxSupport.sendSuccessText("", jsonBean);
+    }
+    /*
+    *放大图片
+    */
+    @RequestMapping("/bigfont.do")
+    @AvoidDuplicateSubmission(needSaveToken = true)
+    public ModelAndView bigfont(HttpServletRequest request,HttpServletResponse response,ModelMap modelMap){
+        String pictureUrl=request.getParameter("pictureUrl");
+        if(StringUtils.isNotBlank(pictureUrl)){
+            modelMap.put("pictureUrl",pictureUrl);
+        }
+        return forword("/itemInformation/bigfont",modelMap);
+    }
+    /*
+     *初始化添加备注
+     */
+    @RequestMapping("/addComment.do")
+    @AvoidDuplicateSubmission(needSaveToken = true)
+    public ModelAndView addComment(HttpServletRequest request,HttpServletResponse response,ModelMap modelMap){
+        String id=request.getParameter("id");
+        PublicItemInformation information=iPublicItemInformation.selectItemInformationByid(Long.valueOf(id));
+        modelMap.put("information",information);
+        return forword("/itemInformation/addComment",modelMap);
+    }
+
+     /*
+     *保存备注
+     */
+    @RequestMapping("/ajax/changeName.do")
+    @AvoidDuplicateSubmission(needRemoveToken = true)
+    @ResponseBody
+    public void changeName(HttpServletRequest request) throws Exception {
+        String informationName=request.getParameter("informationName");
+        String id=request.getParameter("id");
+        String type="";
+        if(StringUtils.isNotBlank(informationName)){
+            if(StringUtils.isNotBlank(id)){
+                PublicItemInformation itemInformation=iPublicItemInformation.selectItemInformationByid(Long.valueOf(id));
+            }
+        }
+        AjaxSupport.sendSuccessText("",type);
+    }
+    /*
+     *保存备注
+     */
+    @RequestMapping("/ajax/saveComment.do")
+    @AvoidDuplicateSubmission(needRemoveToken = true)
+    @ResponseBody
+    public void saveComment(HttpServletRequest request) throws Exception {
+        String id=request.getParameter("id");
+        String comment=request.getParameter("comment");
+        PublicItemInformation information=iPublicItemInformation.selectItemInformationByid(Long.valueOf(id));
+        information.setComment(comment);
+        iPublicItemInformation.saveItemInformation(information);
+        AjaxSupport.sendSuccessText("","保存成功");
+    }
+    @RequestMapping("/editItem.do")
+    @AvoidDuplicateSubmission(needSaveToken = true)
+    public ModelAndView editItem(HttpServletRequest request,HttpServletResponse response,@ModelAttribute( "initSomeParmMap" )ModelMap modelMap) throws Exception {
+        String id = request.getParameter("id");
+        List<TradingDataDictionary> lidata = DataDictionarySupport.getTradingDataDictionaryByType(DataDictionarySupport.DATA_DICT_SITE);
+        modelMap.put("siteList",lidata);
+        PublicItemInformation information=iPublicItemInformation.selectItemInformationByid(Long.valueOf(id));
+
+        TradingItemWithBLOBs ti = new TradingItemWithBLOBs();
+        if(information!=null){
+            ti.setTitle(information.getName());
+            ti.setSku(information.getSku());
+            if(information.getTypeId()==null){
+                ti.setCategoryid("");
+            }else{
+                ti.setCategoryid(information.getTypeId()+"");
+            }
+            ti.setItemName(information.getName());
+            ti.setSite("311");
+            ti.setDescription(information.getDescription());
+            ti.setQuantity(5L);
+            if(information.getSupplierId()!=null){
+                PublicItemSupplier supplier=iPublicItemSupplier.selectItemSupplierByid(information.getSupplierId());
+                if(supplier!=null){
+                    ti.setStartprice(supplier.getPrice());
+                }
+            }
+        }
+        modelMap.put("item",ti);
+        modelMap.put("imageUrlPrefix",imageService.getImageUrlPrefix());
+
+
+
+        SessionVO c= SessionCacheSupport.getSessionVO();
+        //List<PublicUserConfig> ebayList = DataDictionarySupport.getPublicUserConfigByType(DataDictionarySupport.PUBLIC_DATA_DICT_PAYPAL, c.getId());
+        /*UsercontrollerEbayAccount ebay = this.iUsercontrollerEbayAccount.selectById(Long.parseLong(ti.getEbayAccount().toString()));*/
+        Map ebayMap=new HashMap();
+        List<UsercontrollerEbayAccountExtend> ebays=systemUserManagerService.queryCurrAllEbay(ebayMap);
+        List<UsercontrollerEbayAccount> ebayList = new ArrayList();
+        for(UsercontrollerEbayAccount ebay:ebays){
+            ebayList.add(ebay);
+        }
+        modelMap.put("ebayList",ebayList);
+
+        /*List<TradingPicturedetails> litp = this.iTradingPictureDetails.selectByParentId(Long.parseLong(id));
+        for(TradingPicturedetails tp : litp){
+            List<TradingAttrMores> lipic = this.iTradingAttrMores.selectByParnetid(tp.getId(),"PictureURL");
+            if(lipic!=null&&lipic.size()>0){
+                modelMap.put("lipic",lipic);
+            }
+        }*/
+        List<TradingAttrMores> lipic=new ArrayList<TradingAttrMores>();
+        List<PublicItemPictureaddrAndAttr> pictures=iPublicItemPictureaddrAndAttr.selectPictureaddrAndAttrByInformationId(information.getId(),"picture");
+        for(PublicItemPictureaddrAndAttr picture:pictures){
+            TradingAttrMores detail=new TradingAttrMores();
+            detail.setAttr1(null);
+            detail.setValue(picture.getAttrvalue());
+            lipic.add(detail);
+        }
+        modelMap.put("lipic",lipic);
+
+
+        List<TradingPublicLevelAttr> lipa =new ArrayList<TradingPublicLevelAttr>();
+        List<PublicItemPictureaddrAndAttr> attrs=iPublicItemPictureaddrAndAttr.selectPictureaddrAndAttrByInformationId(information.getId(),"attr");
+        for(PublicItemPictureaddrAndAttr attr:attrs){
+            TradingPublicLevelAttr levelAttr=new TradingPublicLevelAttr();
+            levelAttr.setName(attr.getAttrname());
+            levelAttr.setValue(attr.getAttrvalue());
+            lipa.add(levelAttr);
+        }
+        modelMap.put("lipa",lipa);
+        List<TradingTemplateInitTable> ttit = this.iTradingTemplateInitTable.selectByType(Long.parseLong("523"));//彩用经典模板
+        Random r=new Random();
+        TradingTemplateInitTable ttit1=ttit.get(r.nextInt(ttit.size()));
+        modelMap.put("ttit",ttit1);
+        /*TradingVariations tvs = this.iTradingVariations.selectByParentId(ti.getId());
+        if(tvs!=null){
+            Map m = new HashMap();
+            m.put("userid",c.getId());
+            m.put("parentid",tvs.getId());
+            List<VariationQuery> liv = this.iTradingVariation.selectByParentId(m);
+            if(liv!=null&&liv.size()>0){
+                for(VariationQuery iv : liv){
+                    List<TradingPublicLevelAttr> litpa= this.iTradingPublicLevelAttr.selectByParentId("VariationSpecifics",iv.getId());
+                    for(TradingPublicLevelAttr tap : litpa){
+                        iv.setTradingPublicLevelAttr(this.iTradingPublicLevelAttr.selectByParentId(null,tap.getId()));
+                    }
+                }
+                modelMap.put("liv",liv);
+            }
+            TradingPublicLevelAttr tpla = this.iTradingPublicLevelAttr.selectByParentId("VariationSpecificsSet",tvs.getId()).get(0);
+            List<TradingPublicLevelAttr> litpa= this.iTradingPublicLevelAttr.selectByParentId("NameValueList",tpla.getId());
+            List li = new ArrayList();
+            for(TradingPublicLevelAttr tp :litpa){
+                li.add(this.iTradingAttrMores.selectByParnetid(tp.getId(),"Name").get(0));
+            }
+            modelMap.put("clso",li);
+
+            TradingPictures tpes = this.iTradingPictures.selectParnetId(tvs.getId());
+            if(tpes!=null) {
+                List<TradingPublicLevelAttr> livsps = this.iTradingPublicLevelAttr.selectByParentId("VariationSpecificPictureSet", tpes.getId());
+                List lipics = new ArrayList();
+                for (int i = 0; i < livsps.size(); i++) {
+                    Map ms = new HashMap();
+                    TradingPublicLevelAttr tpa = livsps.get(i);
+                    List<TradingPublicLevelAttr> livspsss = this.iTradingPublicLevelAttr.selectByParentId("VariationSpecificValue", tpa.getId());
+                    List<TradingAttrMores> litam = this.iTradingAttrMores.selectByParnetid(tpa.getId(), "MuAttrPictureURL");
+                    ms.put("litam", litam);
+                    ms.put("tamname", livspsss.get(0).getValue());
+                    lipics.add(ms);
+                }
+                if (lipics.size() > 0) {
+                    modelMap.put("lipics", lipics);
+                }
+            }
+        }
+        List<TradingPicturedetails> lipd = this.iTradingPictureDetails.selectByParentId(Long.parseLong(id));
+        for(TradingPicturedetails pd : lipd){
+            List<TradingAttrMores> litam = this.iTradingAttrMores.selectByParnetid(pd.getId(),"PictureURL");
+            modelMap.put("litam",litam);
+        }
+
+        TradingAddItem tai = this.iTradingAddItem.selectParentId(Long.parseLong(id));
+        if(tai!=null){
+            modelMap.put("tai",tai);
+        }
+
+        TradingTemplateInitTable ttit = this.iTradingTemplateInitTable.selectById(ti.getTemplateId());
+        if(ttit!=null){
+            List<TradingAttrMores> litam = this.iTradingAttrMores.selectByParnetidUuid(ttit.getId(),"TemplatePicUrl",ti.getUuid());
+            modelMap.put("templi",litam);
+        }
+        modelMap.put("ttit",ttit);
+        modelMap.put("imageUrlPrefix",imageService.getImageUrlPrefix());*/
+        modelMap.put("itemTitle", HtmlUtils.htmlEscape(ti.getTitle()));
+        modelMap.put("titleLength",ti.getTitle().length());
+        return forword("item/addItem",modelMap);
+    }
+    /*
+  *异步添加标签
+  */
+    @RequestMapping("/ajax/addRemarkNames.do")
+    @AvoidDuplicateSubmission(needRemoveToken = true)
+    @ResponseBody
+    public void addRemarkNames(HttpServletRequest request) throws Exception {
+
+        /*AjaxSupport.sendSuccessText("",list);*/
+    }
+    /*
+   *异步请求图片
+   */
+    @RequestMapping("/ajax/addPictures.do")
+    @AvoidDuplicateSubmission(needRemoveToken = true)
+    @ResponseBody
+    public void addPictures(HttpServletRequest request) throws Exception {
+        String names=request.getParameter("names");
+        List<Map<String,Integer>> list=new ArrayList<Map<String, Integer>>();
+        /*if(StringUtils.isNotBlank(names)){
+            String[] names1=names.split(",");
+            for(int i=0;i<names1.length;i++){
+                String name=names1[i];
+                name=name.substring(0,name.length()-1);
+                if(name.contains("全部")||name.contains("无标签")) {
+                    continue;
+                }else{
+                    PublicUserConfig config= iPublicUserConfig.selectUserConfigByItemTypeName("remark",name);
+                    if(config!=null){
+                        SessionVO c= SessionCacheSupport.getSessionVO();
+                        List<PublicItemPictureaddrAndAttr> attrs=iPublicItemPictureaddrAndAttr.selectPictureaddrAndAttrByremarkId(config.getId(),"remark",c.getId());
+                        Map<String,Integer> map=new HashMap<String, Integer>();
+                        map.put(config.getConfigName(),attrs.size());
+                        list.add(map);
+                    }
+                }
+            }
+        }*/
+        String id1=request.getParameter("id");
+        List<PublicItemPictureaddrAndAttr> pictures=new ArrayList<PublicItemPictureaddrAndAttr>();
+        Map<String,List> m=new HashMap<String, List>();
+        List<PublicItemInformation> informations=new ArrayList<PublicItemInformation>();
+        if(StringUtils.isNotBlank(id1)){
+            SessionVO c= SessionCacheSupport.getSessionVO();
+
+            PublicItemInformation itemInformation=iPublicItemInformation.selectItemInformationByid(Long.valueOf(id1));
+            informations.add(itemInformation);
+            pictures=iPublicItemPictureaddrAndAttr.selectPictureaddrAndAttrByInformationId(itemInformation.getId(),"picture");
+        }
+        m.put("infs",informations);
+        m.put("pic",pictures);
+      /*  m.put("list",list);*/
+        AjaxSupport.sendSuccessText("",m);
+    }
+    /*
+     *初始化添加商品界面
+     */
+    @RequestMapping("/addItemInformation.do")
+    @AvoidDuplicateSubmission(needSaveToken = true)
+    public ModelAndView addItemInformation(HttpServletRequest request,HttpServletResponse response,
+                                        @ModelAttribute( "initSomeParmMap" )ModelMap modelMap){
+        String id=request.getParameter("id");
+        String orderFlag=request.getParameter("orderFlag");
+        PublicItemInformation itemInformation=new PublicItemInformation();
+        PublicItemInventory inventory=new PublicItemInventory();
+        PublicItemCustom custom=new PublicItemCustom();
+        PublicItemSupplier supplier=null;
+        List<PublicItemPictureaddrAndAttr> pictures=null;
+        List<PublicItemPictureaddrAndAttr> attrs=null;
+        List<PublicUserConfig> configs=new ArrayList<PublicUserConfig>();
+        SessionVO sessionVO=SessionCacheSupport.getSessionVO();
+        if(StringUtils.isNotBlank(id)){
+            itemInformation=iPublicItemInformation.selectItemInformationByid(Long.valueOf(id));
+            if(itemInformation.getInventoryId()!=null){
+                inventory=iPublicItemInventory.selectItemInventoryByid(itemInformation.getInventoryId());
+            }
+            if(itemInformation.getCustomId()!=null){
+                custom=iPublicItemCustom.selectItemCustomByid(itemInformation.getCustomId());
+            }
+            if(itemInformation.getSupplierId()!=null){
+                supplier=iPublicItemSupplier.selectItemSupplierByid(itemInformation.getSupplierId());
+            }
+            SessionVO c= SessionCacheSupport.getSessionVO();
+
+            pictures=iPublicItemPictureaddrAndAttr.selectPictureaddrAndAttrByInformationId(itemInformation.getId(),"picture");
+            attrs=iPublicItemPictureaddrAndAttr.selectPictureaddrAndAttrByInformationId(itemInformation.getId(),"attr");
+            if(itemInformation!=null){
+                List<PublicItemPictureaddrAndAttr> andAttrs=iPublicItemPictureaddrAndAttr.selectPictureaddrAndAttrByInformationId(itemInformation.getId(),"remark");
+                for(PublicItemPictureaddrAndAttr andAttr:andAttrs){
+                    PublicUserConfig publicUserConfig=iPublicUserConfig.selectUserConfigById(andAttr.getRemarkId());
+                    if(publicUserConfig!=null){
+                        configs.add(publicUserConfig);
+                    }
+                }
+            }
+        }
+        if(StringUtils.isNotBlank(orderFlag)&&"true".equals(orderFlag)){
+            modelMap.put("orderFlag","true");
+        }else{
+            modelMap.put("orderFlag","false");
+        }
+        List<PublicUserConfig> types=iPublicUserConfig.selectUserConfigByItemType("itemType",sessionVO.getId());
+        String root=request.getContextPath();
+        modelMap.put("types",types);
+        modelMap.put("itemInformation",itemInformation);
+        modelMap.put("inventory",inventory);
+        modelMap.put("custom",custom);
+        modelMap.put("supplier",supplier);
+        modelMap.put("pictures",pictures);
+        modelMap.put("attrs",attrs);
+        modelMap.put("configs", configs);
+        modelMap.put("root",root);
+        return forword("/itemInformation/addItemInformation",modelMap);
+    }
+    /*
+     *添加供应商
+     */
+    @RequestMapping("/addDiscription.do")
+    @AvoidDuplicateSubmission(needSaveToken = true)
+    public ModelAndView addDiscription(HttpServletRequest request,HttpServletResponse response,
+                                           @ModelAttribute( "initSomeParmMap" )ModelMap modelMap) throws UnsupportedEncodingException {
+        String id=request.getParameter("id");
+        PublicItemInformation itemInformation=new PublicItemInformation();
+        if(StringUtils.isNotBlank(id)){
+            itemInformation=iPublicItemInformation.selectItemInformationByid(Long.valueOf(id));
+        }
+        modelMap.put("itemInformation",itemInformation);
+        return forword("/itemInformation/addDiscription",modelMap);
+    }
+    /*
+    *初始化添加商品标签界面
+    */
+    @RequestMapping("/addRemark.do")
+    @AvoidDuplicateSubmission(needSaveToken = true)
+    public ModelAndView addRemark(HttpServletRequest request,HttpServletResponse response,
+                                           @ModelAttribute( "initSomeParmMap" )ModelMap modelMap){
+        String id=request.getParameter("id");
+        /*List<PublicUserConfig> parents=iPublicUserConfig.selectUserConfigByItemType("remark");*/
+        modelMap.put("id",id);
+        /*modelMap.put("parents",parents);*/
+        return forword("/itemInformation/addRemark",modelMap);
+    }
+    /*
+     *删除产品信息
+     */
+   @RequestMapping("/ajax/removeItemInformation.do")
+   @AvoidDuplicateSubmission(needRemoveToken = true)
+   @ResponseBody
+   public void removeItemInformation(HttpServletRequest request) throws Exception {
+       int i=0;
+       while(i>=0){
+           String id=request.getParameter("id["+i+"]");
+           if(!StringUtils.isNotBlank(id)&&i==0){
+               i=-2;
+           }else if(StringUtils.isNotBlank(id)){
+               PublicItemInformation itemInformation= iPublicItemInformation.selectItemInformationByid(Long.valueOf(id));
+               if(itemInformation!=null&&itemInformation.getInventoryId()!=null){
+                   iPublicItemInventory.deleteItemInventory(itemInformation.getInventoryId());
+               }
+               if(itemInformation!=null&&itemInformation.getSupplierId()!=null){
+                   iPublicItemSupplier.deleteItemSupplier(itemInformation.getSupplierId());
+               }
+               if(itemInformation!=null&&itemInformation.getCustomId()!=null){
+                   iPublicItemCustom.deleteItemCustom(itemInformation.getCustomId());
+               }
+               SessionVO sessionVO=SessionCacheSupport.getSessionVO();
+               List<PublicItemPictureaddrAndAttr> andAttrs=iPublicItemPictureaddrAndAttr.selectPictureaddrAndAttrByInformationId(itemInformation.getId(),"remark");
+               for(PublicItemPictureaddrAndAttr andAttr:andAttrs){
+                   List<PublicItemPictureaddrAndAttr> list1=iPublicItemPictureaddrAndAttr.selectPictureaddrAndAttrByRemarkIdAndNotInformationId(andAttr.getRemarkId(),itemInformation.getId(),"remark");
+                   if(list1.size()==0||list1==null){
+                       PublicUserConfig config=new PublicUserConfig();
+                       config.setId(andAttr.getRemarkId());
+                       iPublicUserConfig.deleteUserConfig(config);
+                   }
+                   iPublicItemPictureaddrAndAttr.deletePublicItemPictureaddrAndAttr(andAttr);
+               }
+               iPublicItemInformation.deleteItemInformation(Long.valueOf(id));
+               i++;
+           }else{
+               i=-1;
+           }
+       }
+       if(i==-2){
+           AjaxSupport.sendFailText("fail","商品不存在");
+       }else{
+           AjaxSupport.sendSuccessText("", "删除成功!");
+       }
+
+   }
+    /*
+    *导出产品信息
+    */
+    @RequestMapping("/exportItemInformation1.do")
+    public void  exportItemInformation1(HttpServletRequest request,HttpServletResponse response) throws Exception {
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setCharacterEncoding("UTF-8");
+        int i=0;
+        List<PublicItemInformation> list=new ArrayList<PublicItemInformation>();
+        String outputFile1= request.getSession().getServletContext().getRealPath("/");
+        String outputFile=outputFile1+"download\\itemInformation.xls";
+        while(i>=0){
+            String id=request.getParameter("id["+i+"]");
+            if(!StringUtils.isNotBlank(id)&&i==0) {
+                i = -2;
+            }else if(StringUtils.isNotBlank(id)){
+                PublicItemInformation itemInformation= new PublicItemInformation();
+                itemInformation =iPublicItemInformation.selectItemInformationByid(Long.valueOf(id));
+                list.add(itemInformation);
+                i++;
+            }else{
+                i=-1;
+            }
+        }
+        if(i!=-2) {
+            response.setHeader("Content-Disposition","attachment;filename=itemInformation.xls");// 组装附件名称和格式
+            ServletOutputStream outputStream = response.getOutputStream();
+            iPublicItemInformation.exportItemInformation(list, outputFile,outputStream);
+        }
+    }
+    /*
+   *导入商品标签界面初始化
+   */
+    @RequestMapping("/importItemInformation.do")
+    @AvoidDuplicateSubmission(needSaveToken = true)
+    public ModelAndView importItemInformation(HttpServletRequest request,HttpServletResponse response,
+                                  @ModelAttribute( "initSomeParmMap" )ModelMap modelMap){
+        modelMap.put("flag","false");
+        return forword("/itemInformation/importItemInformation",modelMap);
+    }
+    /*
+   *导入
+   */
+    @RequestMapping("/ajax/importInformation.do")
+    @AvoidDuplicateSubmission(needSaveToken = true)
+    public ModelAndView importInformation(@RequestParam(value = "file", required = false)MultipartFile file,HttpServletRequest request,ModelMap modelMap) throws Exception {
+
+
+        if (file==null||file.isEmpty()){
+            modelMap.put("flag","noFile");
+        }else {
+            String fileName1 = file.getOriginalFilename();
+            modelMap.put("flag", "true");
+            //String typ= MyFileUtils.getFileHeader(file.getInputStream());
+            iPublicItemInformation.importItemInformation(file.getInputStream(),fileName1);
+        }
+
+
+        /*String fileName ="upload.xls";
+        String path=request.getSession().getServletContext().getRealPath("/")+"upload";
+        File f=new File(path,fileName);
+        String fileName1 = file.getOriginalFilename();
+
+        if(!f.exists()){
+            f.mkdirs();
+        }
+        file.transferTo(f);
+        iPublicItemInformation.importItemInformation(f,fileName1);*/
+      /*  for(PublicItemInformation itemInformation:list){
+            iPublicItemInformation.saveItemInformation(itemInformation);
+        }*/
+
+        return forword("/itemInformation/importItemInformation",modelMap);
+    }
+    /*
+    *保存标签
+    */
+    @RequestMapping("/ajax/saveremark.do")
+    @AvoidDuplicateSubmission(needRemoveToken = true)
+    @ResponseBody
+    public void saveremark(HttpServletRequest request) throws Exception {
+        String remark=request.getParameter("remark");
+        String id1=request.getParameter("id");
+        List<Long> list=new ArrayList<Long>();
+        String[] id1s=id1.split(",");
+        String[] remarks=remark.split(",");
+        for(int i=0;i<id1s.length;i++){
+            list.add(Long.valueOf(id1s[i]));
+        }
+        if(remarks.length==0){
+            AjaxSupport.sendFailText("fail","请先添加标签");
+            return;
+        }
+        if(list.size()==0){
+            AjaxSupport.sendFailText("fail","没有商品id");
+            return;
+        }
+        SessionVO sessionVO=SessionCacheSupport.getSessionVO();
+        for(Long id:list){
+            List<PublicItemPictureaddrAndAttr> andAttrs=iPublicItemPictureaddrAndAttr.selectPictureaddrAndAttrByInformationId(id,"remark");
+            for(PublicItemPictureaddrAndAttr andAttr:andAttrs){
+                List<PublicItemPictureaddrAndAttr> list1=iPublicItemPictureaddrAndAttr.selectPictureaddrAndAttrByRemarkIdAndNotInformationId(andAttr.getRemarkId(),id,"remark");
+                if(list1.size()==0||list1==null){
+                    PublicUserConfig config=new PublicUserConfig();
+                    config.setId(andAttr.getRemarkId());
+                    iPublicUserConfig.deleteUserConfig(config);
+                }
+                iPublicItemPictureaddrAndAttr.deletePublicItemPictureaddrAndAttr(andAttr);
+            }
+            for(String remark1:remarks){
+                PublicUserConfig config=iPublicUserConfig.selectUserConfigByItemTypeName("remark",remark1);
+                if(config==null){
+                    config=new PublicUserConfig();
+                    config.setConfigType("remark");
+                    config.setConfigName(remark1);
+                    config.setUserId(sessionVO.getId());
+                    iPublicUserConfig.saveUserConfig(config);
+                }
+                PublicItemPictureaddrAndAttr attr=new PublicItemPictureaddrAndAttr();
+                attr.setAttrtype("remark");
+                attr.setRemarkId(config.getId());
+                attr.setIteminformationId(id);
+                iPublicItemPictureaddrAndAttr.saveItemPictureaddrAndAttr(attr);
+            }
+             PublicItemInformation itemInformation=iPublicItemInformation.selectItemInformationByid(id);
+             itemInformation.setRemarkId(1l);
+             iPublicItemInformation.saveItemInformation(itemInformation);
+        }
+        AjaxSupport.sendSuccessText("", "添加成功!");
+        /*String parentid=request.getParameter("parentid");
+        if(StringUtils.isNotBlank(id)){
+            PublicUserConfig config=new PublicUserConfig();
+            config.setConfigType("remark");
+            config.setConfigName(remark);
+            if(!"0".equals(parentid)){
+                config.setItemParentId(parentid);
+                PublicUserConfig c=iPublicUserConfig.selectUserConfigById(Long.valueOf(parentid));
+                String level=c.getItemLevel();
+                config.setItemLevel((Integer.valueOf(level)+1)+"");
+            }else{
+                config.setItemLevel("1");
+            }
+            iPublicUserConfig.saveUserConfig(config);
+            DataDictionarySupport.removePublicUserConfig(config.getUserId());
+            PublicItemInformation itemInformation= iPublicItemInformation.selectItemInformationByid(Long.valueOf(id));
+            itemInformation.setRemarkId(config.getId());
+            iPublicItemInformation.saveItemInformation(itemInformation);
+            AjaxSupport.sendSuccessText("", "添加成功!");
+        }*/
+
+    }
+    /*
+     *保存产品信息
+     */
+    @RequestMapping("/ajax/saveItemInformation.do")
+    @AvoidDuplicateSubmission(needRemoveToken = true)
+    @ResponseBody
+    public void saveItemInformation(HttpServletRequest request) throws Exception {
+        String remark=request.getParameter("remark");
+        String name=request.getParameter("name");
+        String sku=request.getParameter("sku");
+       /* String itemType=request.getParameter("itemType");*/
+        String warning=request.getParameter("warning");
+        String length=request.getParameter("length");
+        String width=request.getParameter("width");
+        String height=request.getParameter("height");
+        String customName=request.getParameter("customName");
+        String weight=request.getParameter("weight");
+        String declaredValue=request.getParameter("declaredValue");
+        String currencyType=request.getParameter("currencyType");
+        String place=request.getParameter("place");
+        String supplierId=request.getParameter("supplierId");
+        String supplierName=request.getParameter("supplierName");
+        String supplierPrice=request.getParameter("supplierPrice");
+        String supplierCurrency=request.getParameter("supplierCurrency");
+        String supperSku=request.getParameter("supperSku");
+        String supplierRemark=request.getParameter("supplierRemark");
+        String customEnglishName=request.getParameter("customEnglishName");
+        String id=request.getParameter("id");
+        String inventoryid=request.getParameter("inventoryid");
+        String customid=request.getParameter("customid");
+        String supplierid=request.getParameter("supplierid");
+        String discription=request.getParameter("discription");
+        List<String> pictures=new ArrayList<String>();
+        List<String> attrs=new ArrayList<String>();
+        List<String> attrNames=new ArrayList<String>();
+        int i=0;
+        while(i>=0){
+            String picture=request.getParameter("Picture[" + i + "]");
+            if(StringUtils.isNotBlank(picture)){
+                pictures.add(picture);
+                i++;
+            }else{
+                i=-1;
+            }
+        }
+        i=0;
+        while(i>=0){
+            String attr=request.getParameter("attrValue["+i+"]");
+            String attrName=request.getParameter("attrName["+i+"]");
+            if(StringUtils.isNotBlank(attr)){
+                attrs.add(attr);
+                attrNames.add(attrName);
+                i++;
+            }else{
+                i=-1;
+            }
+        }
+        PublicItemInformation itemInformation=new PublicItemInformation();
+        if(!StringUtils.isNotBlank(name)){
+            AjaxSupport.sendFailText("fail","商品名称不能为空");
+            return;
+        }
+        if(!StringUtils.isNotBlank(sku)){
+            AjaxSupport.sendFailText("fail","sku不能为空");
+            return;
+        }
+        if(supplierid!=null){
+            if(StringUtils.isNotBlank(supplierPrice)){
+                PublicItemSupplier supplier=new PublicItemSupplier();
+                supplier.setSupplierid(supplierId);
+                supplier.setName(supplierName);
+                supplier.setRemark(supplierRemark);
+                supplier.setSuppersku(supperSku);
+                supplier.setCurrency(supplierCurrency);
+
+                supplier.setPrice(Double.valueOf(supplierPrice));
+                if(StringUtils.isNotBlank(supplierid)) {
+                    supplier.setId(Long.valueOf(supplierid));
+                }
+                iPublicItemSupplier.saveItemSupplier(supplier);
+                itemInformation.setSupplierId(supplier.getId());
+            }
+        }else{
+            if(StringUtils.isNotBlank(supplierPrice)){
+            PublicItemSupplier supplier=new PublicItemSupplier();
+            supplier.setSupplierid(supplierId);
+            supplier.setName(supplierName);
+            supplier.setRemark(supplierRemark);
+            supplier.setSuppersku(supperSku);
+            supplier.setCurrency(supplierCurrency);
+            supplier.setPrice(Double.valueOf(supplierPrice));
+            if(StringUtils.isNotBlank(supplierid)){
+                supplier.setId(Long.valueOf(supplierid));
+            }
+            iPublicItemSupplier.saveItemSupplier(supplier);
+            itemInformation.setSupplierId(supplier.getId());
+            }
+        }
+        if(StringUtils.isNotBlank(customName)||StringUtils.isNotBlank(customEnglishName)||StringUtils.isNotBlank(currencyType)||StringUtils.isNotBlank(declaredValue)||StringUtils.isNotBlank(weight)||StringUtils.isNotBlank(place)){
+            PublicItemCustom custom = new PublicItemCustom();
+            custom.setName(customName);
+            custom.setEnglishname(customEnglishName);
+            custom.setCurrency(currencyType);
+            if (StringUtils.isNotBlank(declaredValue)) {
+                custom.setDeclaredvalue(Double.valueOf(declaredValue));
+            }
+            custom.setProductionplace(place);
+            if (StringUtils.isNotBlank(weight)) {
+                custom.setWeight(Double.valueOf(weight));
+            }
+            if(StringUtils.isNotBlank(customid)){
+                custom.setId(Long.valueOf(customid));
+            }
+            iPublicItemCustom.saveItemCustom(custom);
+            itemInformation.setCustomId(custom.getId());
+        }
+        if(StringUtils.isNotBlank(height)||StringUtils.isNotBlank(length)||StringUtils.isNotBlank(width)||StringUtils.isNotBlank(warning)) {
+            PublicItemInventory inventory = new PublicItemInventory();
+            if (StringUtils.isNotBlank(height)) {
+                inventory.setHeight(Double.valueOf(height));
+            }
+            if (StringUtils.isNotBlank(length)) {
+                inventory.setLength(Double.valueOf(length));
+            }
+            if (StringUtils.isNotBlank(width)) {
+                inventory.setWidth(Double.valueOf(width));
+            }
+            if (StringUtils.isNotBlank(warning)) {
+                inventory.setWarningnumber(Integer.valueOf(warning));
+            }
+            if(StringUtils.isNotBlank(inventoryid)){
+                inventory.setId(Long.valueOf(inventoryid));
+            }
+            iPublicItemInventory.saveItemInventory(inventory);
+            itemInformation.setInventoryId(inventory.getId());
+        }
+        itemInformation.setName(name);
+        itemInformation.setSku(sku);
+       /* itemInformation.setTypeId(Long.valueOf(itemType));*/
+        PublicItemInformation itemInformation1=new PublicItemInformation();
+        if(StringUtils.isNotBlank(id)){
+            itemInformation1=iPublicItemInformation.selectItemInformationByid(Long.valueOf(id));
+            if(itemInformation1!=null){
+                itemInformation.setId(Long.valueOf(id));
+                if(!name.equals(itemInformation1.getName())){
+                    itemInformation.setTypeflag(0);
+                }
+            }
+        }
+        if(StringUtils.isNotBlank(discription)){
+            itemInformation.setDescription(discription);
+        }
+
+        iPublicItemInformation.saveItemInformation(itemInformation);
+        SessionVO c= SessionCacheSupport.getSessionVO();
+        List<PublicItemPictureaddrAndAttr> pictureaddrAnds=iPublicItemPictureaddrAndAttr.selectPictureaddrAndAttrByInformationId(itemInformation.getId(),"picture") ;
+        List<PublicItemPictureaddrAndAttr> AndAttrs=iPublicItemPictureaddrAndAttr.selectPictureaddrAndAttrByInformationId(itemInformation.getId(),"attr") ;
+        for(PublicItemPictureaddrAndAttr p:pictureaddrAnds){
+            iPublicItemPictureaddrAndAttr.deletePublicItemPictureaddrAndAttr(p);
+        }
+        for(PublicItemPictureaddrAndAttr p:AndAttrs){
+            iPublicItemPictureaddrAndAttr.deletePublicItemPictureaddrAndAttr(p);
+        }
+        for(int j=0;j<pictures.size();j++){
+            PublicItemPictureaddrAndAttr picture=new PublicItemPictureaddrAndAttr();
+            picture.setIteminformationId(itemInformation.getId());
+            picture.setAttrname("picture");
+            picture.setAttrvalue(pictures.get(j));
+            picture.setAttrtype("picture");
+            iPublicItemPictureaddrAndAttr.saveItemPictureaddrAndAttr(picture);
+        }
+        for(int j=0;j<attrs.size();j++){
+            String attr1=attrs.get(j);
+            String attrName1=attrNames.get(j);
+            PublicItemPictureaddrAndAttr attr=new PublicItemPictureaddrAndAttr();
+            attr.setAttrname(attrName1);
+            attr.setAttrvalue(attr1);
+            attr.setIteminformationId(itemInformation.getId());
+            attr.setAttrtype("attr");
+            iPublicItemPictureaddrAndAttr.saveItemPictureaddrAndAttr(attr);
+        }
+        SessionVO sessionVO=SessionCacheSupport.getSessionVO();
+        if(StringUtils.isNotBlank(remark)){
+            String[] remarks=remark.split(",");
+            List<PublicItemPictureaddrAndAttr> andAttrs=iPublicItemPictureaddrAndAttr.selectPictureaddrAndAttrByInformationId(itemInformation.getId(),"remark");
+            for(PublicItemPictureaddrAndAttr andAttr:andAttrs){
+                List<PublicItemPictureaddrAndAttr> list1=iPublicItemPictureaddrAndAttr.selectPictureaddrAndAttrByRemarkIdAndNotInformationId(andAttr.getRemarkId(),itemInformation.getId(),"remark");
+                if(list1.size()==0||list1==null){
+                    PublicUserConfig config=new PublicUserConfig();
+                    config.setId(andAttr.getRemarkId());
+                    iPublicUserConfig.deleteUserConfig(config);
+                }
+                iPublicItemPictureaddrAndAttr.deletePublicItemPictureaddrAndAttr(andAttr);
+            }
+            for(String remark1:remarks){
+                PublicUserConfig config=iPublicUserConfig.selectUserConfigByItemTypeName("remark",remark1);
+                if(config==null){
+                    config=new PublicUserConfig();
+                    config.setConfigType("remark");
+                    config.setConfigName(remark1);
+                    config.setUserId(sessionVO.getId());
+                    iPublicUserConfig.saveUserConfig(config);
+                }
+                PublicItemPictureaddrAndAttr attr=new PublicItemPictureaddrAndAttr();
+                attr.setAttrtype("remark");
+                attr.setRemarkId(config.getId());
+                attr.setIteminformationId(itemInformation.getId());
+                iPublicItemPictureaddrAndAttr.saveItemPictureaddrAndAttr(attr);
+            }
+            itemInformation.setRemarkId(1l);
+            iPublicItemInformation.saveItemInformation(itemInformation);
+        }else{
+            List<PublicItemPictureaddrAndAttr> andAttrs=iPublicItemPictureaddrAndAttr.selectPictureaddrAndAttrByInformationId(itemInformation.getId(),"remark");
+            for(PublicItemPictureaddrAndAttr andAttr:andAttrs){
+                List<PublicItemPictureaddrAndAttr> list1=iPublicItemPictureaddrAndAttr.selectPictureaddrAndAttrByRemarkIdAndNotInformationId(andAttr.getRemarkId(),itemInformation.getId(),"remark");
+                if(list1.size()==0||list1==null){
+                    PublicUserConfig config=new PublicUserConfig();
+                    config.setId(andAttr.getRemarkId());
+                    iPublicUserConfig.deleteUserConfig(config);
+                }
+                iPublicItemPictureaddrAndAttr.deletePublicItemPictureaddrAndAttr(andAttr);
+            }
+            itemInformation.setRemarkId(null);
+            iPublicItemInformation.saveItemInformation(itemInformation);
+
+        }
+        AjaxSupport.sendSuccessText("", "操作成功!");
+    }
+
+    /**
+     * 得到产品图片信息
+     * @param modelMap
+     * @param request
+     * @return
+     */
+    @RequestMapping("/ajax/getPicList.do")
+    @ResponseBody
+    public void getPicList(ModelMap modelMap,HttpServletRequest request){
+        String informationid = request.getParameter("informationid");
+        SessionVO c= SessionCacheSupport.getSessionVO();
+        List<PublicItemPictureaddrAndAttr> lippa = this.iPublicItemPictureaddrAndAttr.selectPictureaddrAndAttrByInformationId(Long.parseLong(informationid),"picture");
+        for(PublicItemPictureaddrAndAttr ppaa:lippa){
+            ppaa.setUuid(EncryptionUtil.md5Encrypt(ppaa.getAttrvalue()));
+        }
+        AjaxSupport.sendSuccessText("",lippa);
+    }
+    /*
+ *图片管理列表
+ */
+    @RequestMapping("/pictureList.do")
+    public ModelAndView pictureList(HttpServletRequest request,HttpServletResponse response,ModelMap modelMap){
+        SessionVO sessionVO=SessionCacheSupport.getSessionVO();
+        modelMap.put("imageUrlPrefix",imageUrlPrefix);
+        modelMap.put("loginUser",sessionVO.getLoginId());
+        modelMap.put("loginId",imageService.getImageUserDir());
+        return forword("/itemInformation/pictureList",modelMap);
+    }
+    @RequestMapping("/upLoadImage.do")
+    public void upLoadImage(@RequestParam("multipartFiles")MultipartFile[] multipartFiles,
+                            HttpServletResponse response,HttpServletRequest request,
+                            String sku) throws IOException {
+        //SessionVO sessionVO=SessionCacheSupport.getSessionVO();
+
+        if(ObjectUtils.isLogicalNull(multipartFiles)){
+            AjaxResponse.sendText(response, "nofile");
+            return;
+        }
+        if(StringUtils.isBlank(sku)){
+            AjaxResponse.sendText(response, "nosku");
+            return;
+        }
+        String r="";
+        StringBuffer sb=new StringBuffer();
+        sb.append("{\"files\":[");
+        for(int i=0;i<multipartFiles.length;i++){
+            MultipartFile multipartFile = multipartFiles[i];
+            String stuff= MyStringUtil.getExtension(multipartFile.getOriginalFilename(), "");
+            r = StorageManager.ftpUploadFile(multipartFile.getInputStream(), imageService.getImageUserDir()+"/"+sku, stuff);
+            if(r==null){r="err";}
+
+            String url=imageUrlPrefix+imageService.getImageUserDir()+"/"+sku+"/"+r;
+            String delUrl=request.getContextPath()+"/information/ajax/deletePicture.do?sku="+sku+"&pic="+r;//todo 需要修改！
+            String x= MyStringUtil.makeJqueryUpLoadData(multipartFile, r, url, delUrl);
+            sb.append(x);
+
+
+            if (i<multipartFiles.length-1){
+                sb.append(",");
+            }
+        }
+        sb.append("]}");
+        AjaxResponse.sendText(response, sb.toString());
+    }
+    /**获取list数据的ajax方法*/
+    @RequestMapping("/ajax/loadItemInformationList1.do")
+    @ResponseBody
+    public void loadItemInformationList1(CommonParmVO commonParmVO,HttpServletRequest request) throws Exception {
+        String sku=request.getParameter("sku");
+        if(StringUtils.isNotBlank(sku)){
+            sku=sku.toLowerCase();
+        }
+       // SessionVO sessionVO=SessionCacheSupport.getSessionVO();
+        PageJsonBean jsonBean=commonParmVO.getJsonBean();
+        //Page page=jsonBean.toPage();
+        CXFPostClient client=(CXFPostClient)ApplicationContextUtil.getBean(CXFPostClient.class);
+        List<Map<String,String>> mapList=new ArrayList<>();
+        List<String> lists=new ArrayList<>();
+        if(StringUtils.isNotBlank(sku)){
+            lists= client.findImagesBySku(imageService.getImageUserDir(),sku);
+            if(lists!=null&&lists.size()>0){
+                List<String> smallList=new ArrayList<>();
+                List<String> bigList=new ArrayList<>();
+                for(String list:lists){
+                    if(list.contains("small")){
+                        smallList.add(list);
+                    }else{
+                        bigList.add(list);
+                    }
+                }
+                for(String small:smallList){
+                    String[] smallfont1=small.split("_");
+                    String smallfont=smallfont1[0];
+                    Map<String,String> map=new HashMap<>();
+                    map.put("small",small);
+                        for(String big:bigList){
+                        if(big.contains(smallfont)){
+                            map.put("big",big);
+                        }
+                    }
+                    map.put("loginId",imageService.getImageUserDir());
+                    map.put("sku",sku);
+                    mapList.add(map);
+                }
+            }
+        }
+        jsonBean.setList(mapList);
+        jsonBean.setTotal((int)mapList.size());
+        AjaxSupport.sendSuccessText("", jsonBean);
+    }
+    /**获取list数据的ajax方法*/
+    @RequestMapping("/ajax/loadItemInformationList2.do")
+    @ResponseBody
+    public void loadItemInformationList2(CommonParmVO commonParmVO,HttpServletRequest request) throws Exception {
+        SessionVO sessionVO=SessionCacheSupport.getSessionVO();
+        PageJsonBean jsonBean=commonParmVO.getJsonBean();
+        Page page=jsonBean.toPage();
+        Map map=new HashMap();
+        List<UsercontrollerUserExtend> orgUsers=systemUserManagerService.queryAllUsersByOrgID("yes");
+        List<ListingDataQuery> lists=new ArrayList<>();
+        CXFPostClient client=(CXFPostClient)ApplicationContextUtil.getBean(CXFPostClient.class);
+        List<String> skus=client.findImagesDirByUser(imageService.getImageUserDir());
+        List<String> skus1=new ArrayList<>();
+        if(skus!=null&&skus.size()>10){
+            for(int i=0;i<=10;i++){
+                skus1.add(skus.get(i));
+            }
+        }else if(skus!=null&&skus.size()<=10){
+            skus1.addAll(skus);
+        }
+        if(skus1!=null&&skus1.size()>0){
+            for(String sku:skus1){
+                Map map1=new HashMap();
+                Page page1=new Page();
+                page.setPageSize(1);
+                page.setCurrentPage(1);
+                if(orgUsers!=null&&orgUsers.size()>0){
+                    map1.put("orgUsers",orgUsers);
+                }else{
+                    orgUsers=new ArrayList<>();
+                    UsercontrollerUserExtend orguser=new UsercontrollerUserExtend();
+                    orguser.setUserId((int) sessionVO.getId());
+                    orgUsers.add(orguser);
+                    map1.put("orgUsers",orgUsers);
+                }
+                ListingDataQuery query=new ListingDataQuery();
+                TradingItem item=iTradingItem.selectItemBySkuAndUserId(sku, orgUsers);
+                if(item!=null){
+                    List<TradingPicturedetails> picturedetails=iTradingPictureDetails.selectByParentId(item.getId());
+                    if(picturedetails!=null&&picturedetails.size()>0){
+                        for(TradingPicturedetails picturedetails1:picturedetails){
+                            List<TradingAttrMores> attrs=iTradingAttrMores.selectByParnetid(picturedetails1.getId(),"PictureURL");
+                            if(attrs!=null&&attrs.size()>0){
+                                query.setPicUrl(attrs.get(0).getValue());
+                                query.setSku(sku);
+                                lists.add(query);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        page.setCurrentPage(1);
+
+
+        page.setPageSize(20);
+        jsonBean.setList(lists);
+        jsonBean.setTotal((int)lists.size());
+        AjaxSupport.sendSuccessText("", jsonBean);
+    }
+    @RequestMapping("/ajax/deletePicture.do")
+    @ResponseBody
+    public void deletePicture(HttpServletRequest request) throws Exception {
+        String sku=request.getParameter("sku");
+        String pic=request.getParameter("pic");
+        //String url=request.getParameter("picUrl");
+        SessionVO sessionVO=SessionCacheSupport.getSessionVO();
+        CXFPostClient client=(CXFPostClient)ApplicationContextUtil.getBean(CXFPostClient.class);
+        List<String> pics=new ArrayList<>();
+        String message="";
+        SystemLog systemLog=new SystemLog();
+        systemLog.setEventname(SystemLogUtils.PICTURE_MANAGER_DELETE);
+        systemLog.setOperuser(sessionVO.getUserName());
+        if(StringUtils.isNotBlank(sku)&&StringUtils.isNotBlank(pic)){
+            String[] pictures=pic.split(",");
+            for(String picture:pictures){
+                pics.add(picture);
+            }
+            String delte=client.delServerImg(imageService.getImageUserDir(),sku,pics);
+            message=delte;
+        }else{
+            systemLog.setEventdesc("删除图片失败!原因:sku或者picture为空");
+            SystemLogUtils.saveLog(systemLog);
+            AjaxSupport.sendFailText("fail","删除失败!");
+            return;
+        }
+        if("ok".equals(message)){
+            systemLog.setEventdesc("删除图片成功!");
+        }else{
+            systemLog.setEventdesc("删除图片失败!原因:"+message);
+        }
+        SystemLogUtils.saveLog(systemLog);
+        AjaxSupport.sendSuccessText("",message);
+    }
+    /*修改ftp密码*/
+    @RequestMapping("/updateFtp.do")
+    public ModelAndView updateFtp(HttpServletRequest request,HttpServletResponse response,ModelMap modelMap){
+        return forword("/itemInformation/updateFtp",modelMap);
+    }
+    @RequestMapping("/ajax/saveFtpPassword.do")
+    @AvoidDuplicateSubmission(needRemoveToken = true)
+    @ResponseBody
+    public void saveFtpPassword(HttpServletRequest request,String password,String confirmPassword) throws Exception {
+        if(StringUtils.isBlank(password)){
+            AjaxSupport.sendFailText("fail","密码不能为空!");
+            return;
+        }
+        if(password.length()<6){
+            AjaxSupport.sendFailText("fail","密码长度不能小于6位数!");
+            return;
+        }
+        if(password.length()>20){
+            AjaxSupport.sendFailText("fail","密码长度不能大于20位数!");
+            return;
+        }
+        if(!password.equals(confirmPassword)){
+            AjaxSupport.sendFailText("fail","确认密码与您输入的密码不相同!");
+            return;
+        }
+        Map map=new HashMap();
+        map.put("passw",password);
+        ftPservice.changeFtpPassWord(map);
+        AjaxSupport.sendSuccessText("","修改成功");
+    }
+
+     /*图片上传页面初始化*/
+    @RequestMapping("/uploadViewImg.do")
+    public ModelAndView uploadViewImg(HttpServletRequest request,HttpServletResponse response,ModelMap modelMap){
+        String sku=request.getParameter("sku");
+        modelMap.put("sku",sku);
+        return forword("/itemInformation/uploadViewImg",modelMap);
+    }
+}

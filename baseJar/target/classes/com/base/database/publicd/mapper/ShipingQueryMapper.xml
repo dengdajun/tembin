@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.base.database.publicd.mapper.ShipingQueryMapper">
+<select id="queryShipingType" resultType="com.base.domains.querypojos.ShippingCoustomQueryVO" parameterType="map">
+select * FROM (
+select s.id,s.ShippingService,s.parent_id parentID,s.CREATE_user cuser,
+s1.shipping_name shipingName,s1.site,
+u.user_org_id orgID,
+d.value
+ from trading_shippingserviceoptions s
+LEFT JOIN trading_shippingdetails s1 on s.parent_id=s1.id
+LEFT JOIN usercontroller_user u ON s.create_user=u.user_id
+LEFT JOIN trading_data_dictionary d on s.ShippingService = d.id
+
+WHERE s1.site=#{siteID} and u.user_org_id=#{orgID}
+
+UNION ALL
+
+select s.id,s.ShippingService,s.parent_id parentID,s.CREATE_user cuser,
+s1.shipping_name shipingName,s1.site,
+u.user_org_id orgID,
+d.value
+ from trading_internationalshippingserviceoption s
+LEFT JOIN trading_shippingdetails s1 on s.parent_id=s1.id
+LEFT JOIN usercontroller_user u ON s.create_user=u.user_id
+LEFT JOIN trading_data_dictionary d on s.ShippingService = d.id
+
+WHERE s1.site=#{siteID} and u.user_org_id=#{orgID}
+) a
+</select>
+</mapper>

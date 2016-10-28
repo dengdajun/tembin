@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="war" name="postApi:war">
+    <output-path>$PROJECT_DIR$/../postApi/target</output-path>
+    <root id="archive" name="postapi.war">
+      <element id="artifact" artifact-name="postApi:war exploded" />
+    </root>
+  </artifact>
+</component>

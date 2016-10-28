@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/../baseJar/baseJar.iml" filepath="$PROJECT_DIR$/../baseJar/baseJar.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../postApi/postApi.iml" filepath="$PROJECT_DIR$/../postApi/postApi.iml" />
+      <module fileurl="file://$PROJECT_DIR$/xsddWeb.iml" filepath="$PROJECT_DIR$/xsddWeb.iml" />
+    </modules>
+  </component>
+</project>

@@ -1,0 +1,104 @@
+package com.publicd.service.impl;
+
+import com.base.database.customtrading.mapper.PublicUserConfigQueryMapper;
+import com.base.database.publicd.mapper.PublicUserConfigMapper;
+import com.base.database.publicd.model.PublicUserConfig;
+import com.base.database.publicd.model.PublicUserConfigExample;
+import com.base.domains.querypojos.PublicUserConfigQuery;
+import com.base.utils.cache.SessionCacheSupport;
+import com.base.utils.common.ObjectUtils;
+import com.base.utils.exception.Asserts;
+import org.apache.commons.beanutils.PropertyUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 退货政策
+ * Created by lq on 2014/7/29.
+ */
+@Service
+@Transactional(rollbackFor = Exception.class)
+public class PublicUserConfigImpl implements com.publicd.service.IPublicUserConfig {
+    @Autowired
+    private PublicUserConfigMapper publicUserConfigMapper;
+    @Autowired
+    private PublicUserConfigQueryMapper publicUserConfigQueryMapper;
+    @Override
+    public void saveUserConfig(PublicUserConfig UserConfig) throws Exception {
+        if(UserConfig.getId()==null){
+            publicUserConfigMapper.insert(UserConfig);
+        }else{
+            PublicUserConfig t=publicUserConfigMapper.selectByPrimaryKey(UserConfig.getId());
+            publicUserConfigMapper.updateByPrimaryKeySelective(UserConfig);
+        }
+    }
+
+    @Override
+    public List<PublicUserConfig> selectUserConfigByItemType(String configType,Long userId) {
+        PublicUserConfigExample example=new PublicUserConfigExample();
+        PublicUserConfigExample.Criteria cr=example.createCriteria();
+        cr.andConfigTypeEqualTo(configType);
+        cr.andUserIdEqualTo(userId);
+        List<PublicUserConfig> list=publicUserConfigMapper.selectByExample(example);
+        return list;
+    }
+
+    @Override
+    public PublicUserConfig selectUserConfigById(Long id) {
+        PublicUserConfigExample example=new PublicUserConfigExample();
+        PublicUserConfigExample.Criteria cr=example.createCriteria();
+        cr.andIdEqualTo(id);
+        List<PublicUserConfig> list=publicUserConfigMapper.selectByExample(example);
+        return list!=null&&list.size()>0?list.get(0):null;
+    }
+
+    @Override
+    public void deleteUserConfig(PublicUserConfig UserConfig) throws Exception {
+        if(UserConfig!=null&&UserConfig.getId()!=null){
+            publicUserConfigMapper.deleteByPrimaryKey(UserConfig.getId());
+        }
+    }
+
+    @Override
+    public PublicUserConfig selectUserConfigByItemTypeName(String configType, String name) {
+        PublicUserConfigExample example=new PublicUserConfigExample();
+        PublicUserConfigExample.Criteria cr=example.createCriteria();
+        cr.andConfigTypeEqualTo(configType);
+        cr.andConfigNameEqualTo(name);
+        List<PublicUserConfig> list=publicUserConfigMapper.selectByExample(example);
+        return list!=null&&list.size()>0?list.get(0):null;
+    }
+
+/*    @Override
+    public List<PublicUserConfig> selectUserConfigByRemark() {
+        PublicUserConfigExample example=new PublicUserConfigExample();
+        PublicUserConfigExample.Criteria cr=example.createCriteria();
+        cr.andConfigTypeEqualTo("remark");
+        List<PublicUserConfig> list=publicUserConfigMapper.selectByExample(example);
+        return list;
+    }*/
+
+
+    @Override
+    public List<PublicUserConfig> selectUserConfigByItemTypeListUser(String configType,List<Long> liuser) {
+        PublicUserConfigExample example=new PublicUserConfigExample();
+        PublicUserConfigExample.Criteria cr=example.createCriteria();
+        cr.andConfigTypeEqualTo(configType);
+        cr.andUserIdIn(liuser);
+        List<PublicUserConfig> list=publicUserConfigMapper.selectByExample(example);
+        return list;
+    }
+
+
+    @Override
+    public List<PublicUserConfigQuery> selectUserConfigByItemTypeList(String configType) {
+        Map m = new HashMap();
+        List<PublicUserConfigQuery> list = this.publicUserConfigQueryMapper.selectByPublicUserConfigQueryList(m);
+        return list;
+    }
+}

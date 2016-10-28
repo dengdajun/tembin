@@ -1,0 +1,345 @@
+import com.base.database.trading.model.TradingReturnpolicy;
+import com.base.domains.userinfo.UsercontrollerDevAccountExtend;
+import com.base.sampleapixml.APINameStatic;
+import com.base.utils.common.ConvertPOJOUtil;
+import com.base.utils.cxfclient.CXFClientRequestVO;
+import com.base.utils.cxfclient.postapi.namespace.PostApiService;
+import com.base.utils.httpclient.ApiHeader;
+import com.base.utils.httpclient.HttpClientUtil;
+import com.base.utils.threadpool.AddApiTask;
+import com.base.xmlpojo.trading.addproduct.ReturnPolicy;
+import com.common.base.utils.json.JsonUtils;
+import com.google.common.collect.*;
+import com.thirdpart.vo.ThirdPartAccountVO;
+import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.math.NumberUtils;
+import org.apache.cxf.jaxws.JaxWsProxyFactoryBean;
+import org.apache.http.client.HttpClient;
+import org.apache.http.message.BasicHeader;
+import org.springframework.util.CollectionUtils;
+
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/**
+ * Created by Administrtor on 2014/7/22.
+ */
+public class Test1 {
+    public static void main(String[] args) {
+        System.out.println("44");
+    }
+
+
+
+    /**测试api环境*/
+    //@Test
+    public void test2() throws Exception{
+        String xml=getEbayUserInfo();
+        List<BasicHeader> headers = new ArrayList<BasicHeader>();
+            headers.add(new BasicHeader("X-EBAY-API-COMPATIBILITY-LEVEL","879"));
+            headers.add(new BasicHeader("X-EBAY-API-DEV-NAME", "bbafa7e7-2f98-4783-9c34-f403faeb007f"));
+            headers.add(new BasicHeader("X-EBAY-API-APP-NAME","chengdul-6dfe-4b1b-905c-41b1bd716d72"));
+            headers.add(new BasicHeader("X-EBAY-API-CERT-NAME","41bd760a-48ab-489b-87b1-f5d33a7044a6"));
+        /*headers.add(new BasicHeader("X-EBAY-API-DEV-NAME", "bbafa7e7-2f98-4783-9c34-f403faeb007f"));
+        headers.add(new BasicHeader("X-EBAY-API-APP-NAME","chengdul-5b82-4a84-a496-6a2c75e4e0d5"));
+        headers.add(new BasicHeader("X-EBAY-API-CERT-NAME","724f4467-9280-437c-a998-f5bcfee67ce5"));*/
+        headers.add(new BasicHeader("X-EBAY-API-SITEID","0"));
+        headers.add(new BasicHeader("X-EBAY-API-CALL-NAME", "GetOrders"));
+
+        HttpClient httpClient= HttpClientUtil.getHttpsClient();
+        String res= HttpClientUtil.post(httpClient, "https://api.ebay.com/ws/api.dll", xml, "UTF-8", headers);
+        //String res= HttpClientUtil.post(httpClient, "https://api.sandbox.ebay.com/ws/api.dll", xml, "UTF-8", headers);
+        System.out.println(res);
+    }
+
+    //case测试
+  //  @Test
+    public void test3()throws Exception{
+        List<BasicHeader> headers = new ArrayList<BasicHeader>();
+        headers.add(new BasicHeader("X-EBAY-SOA-OPERATION-NAME", "getUserCases"));
+        headers.add(new BasicHeader("X-EBAY-SOA-SECURITY-TOKEN ", "AgAAAA**AQAAAA**aAAAAA**DsKjVA**nY+sHZ2PrBmdj6wVnY+sEZ2PrA2dj6AFloalDJSKpg6dj6x9nY+seQ**blACAA**AAMAAA**joxjFxde0HiJCjuFdzq1O9mpb1a6M9IKRUQLysJfcgF5CCKqOG5QwLMQ8rvgnO7eCwgyDWu3UeWAddrE5yZjh644cuBhbr96zsabiExE3wSvYzwTB6gaf0fIcku0YOg9c1GInUYrU++NbufljA6npeGvL60IIWaJbk2rF6GUBvNQ/27+kpk3XTF4K4znyaYZ1o8TcU1z/TIFKi+qZ3SST874Yvhjyk+mP5KuLPTCFLjq3p1oiiEW7snoBbfJMcw+dISlJxzxAzyfMcOvxn18tuPVyRn/R49c+JFSadPxSmfik6rzBvsUno7mRIH17QPNni/9p5tLdyPr7+wsS8402VCfMj7dZ7dyGPE/S9dG3Wja9uQ0JLelxblGVmH+k3GUpqw4YkMsWTqMLLque/PYXLyFp22BsWsjBWq3J6OwXWa40TlYvbER6sTeh1Ghoi29bQTEUSLkUleYqCehptEp65BqR8QGlPblFd8p0dScRrJTQ3dssC7t7coUQ8u0TbOLKKDT/ReRMm74EY+n7lAWmPU+9DunRPziE60H1IRtINcYY9CL/s5qJ3Vlnrpb7vDu/lrS5My/k33JsgFZ/lgb1vXg23VCPJiDm+d53gOYVRK9EJKlCCppkQw0Gss38rZRdchVIb93I7bGSvRJp8fhjT7sTqE7pXRKDDHSyqHdAtTt3j/H1ozcifjOXnsQPeTJl2uPMoPrIAHzHCDVCZ8gL/O8ZI0I86D/BrKIhJFy/UUe1z9mgt5OhM+Aoy7xJtMP"));
+        String xml="<?xml version=\"1.0\" encoding=\"utf-8\"?>" +
+                "<getUserCasesRequest xmlns:ser=\"http://www.ebay.com/marketplace/resolution/v1/services\" xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\">" +
+                "<ser:creationDateRangeFilter>" +
+                "<ser:fromDate>2015-08-28T04:00:00.000Z</ser:fromDate>" +
+                "<ser:toDate>2015-09-02T04:00:00.000Z</ser:toDate>" +
+                "</ser:creationDateRangeFilter>" +
+                "<ser:paginationInput>" +
+                "<ser:pageNumber>1</ser:pageNumber>" +
+                "<ser:entriesPerPage>100</ser:entriesPerPage>" +
+                "</ser:paginationInput>"+
+                "</getUserCasesRequest>";
+
+
+
+
+
+        HttpClient httpClient= HttpClientUtil.getHttpsClient();
+        String res= HttpClientUtil.post(httpClient, "https://svcs.ebay.com/services/resolution/ResolutionCaseManagementService/v1?REST-PAYLOAD", xml, "UTF-8", headers);
+
+        String x="";
+
+    }
+
+
+
+
+
+
+
+
+    public String getColXml(){
+        String xml = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
+                "<GetTokenStatusRequest xmlns=\"urn:ebay:apis:eBLBaseComponents\">\n" +
+                "<RequesterCredentials>\n" +
+                "<eBayAuthToken>AgAAAA**AQAAAA**aAAAAA**ZoMTVQ**nY+sHZ2PrBmdj6wVnY+sEZ2PrA2dj6AEloCgD5CEog+dj6x9nY+seQ**blACAA**AAMAAA**ZnmNxVclnr4oXXyay1h6Jlye8tY4BJTELsRrV20V57WB2xdlducLPHFcUNMvlBCLQy1P01z6JAGEHNAjir5065NYBCOKpedEc8CFuzVSH/obRVAb5jS0sSj80XIK0Q3jKupqrK17ElSaWON1UmTT9BMWdRXYYqkM7LcL/kvMpKzQCahJsdPva5+5piW/ujBkgqUZgSlY+8voMSSOHs2v/oZYDGhh7WfI6pt8SF1+IyLmyvkhWUKLQZkGpgx+BWSCquh9LY4x2EsRsrQNk7Awy5zDTPlSKXzMmsjM4hQQKK/EkI70OPhnx66i9bmhUlrtrlV86D1WfWX/BMn/HqSGuDvcj3wxk2LarukjVb0vY2D7hICs7WJwIfNdq3V3IhfKeqOr+L+9n18sbZT5Q+ItMkZPCP90m5D/y0AG8L9GHH51LckBo9o2MJm7PxPapacUtlva8n1id9PEn/+5QSy7KKIM+G+W7KmULaY1QrDdsQwjgOBiK3IhffMjouZRH/D8IWtEo73nx26CV9zn086p420S7M6OFn5AigpQEpWr8q3/SfqzImfDQ+OH9ayc1Qi6ajpCzXo/lpowOXtlWR0kaeT//Q7ePoqDrcgV0Bn95QoBeyInMcLs6THbdjnkL3gPueMUX7BsYh7D5fHZWM9tFCZBuA/yOkiUpNny2D1xga2laAz9gSS9RZcvTMUgcWWfXMT7JR0wM+klio/bhkjzaSnjMer7haah9sGfWVkXIGKDWp8hMgggR9DArIdGJj3D</eBayAuthToken>\n" +
+                "</RequesterCredentials>\n" +
+                "</GetTokenStatusRequest>​";
+        return xml;
+    }
+
+
+    public String getCosXml(){
+        String xml="<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
+                "<GetStoreRequest xmlns=\"urn:ebay:apis:eBLBaseComponents\">\n" +
+                "  <RequesterCredentials>\n" +
+                "    <eBayAuthToken>AgAAAA**AQAAAA**aAAAAA**vVcRVA**nY+sHZ2PrBmdj6wVnY+sEZ2PrA2dj6wFk4GhCpGGoA+dj6x9nY+seQ**cx0CAA**AAMAAA**Z2MB0OtmO4JsPFBZPcjclippjnZG4bwpcpXYRXDdc6wEppv5m/WiCvsjyTKWoVXCMxQl2se3U6Vn93oBL6zg8EcR3GCXCC3ZbTpEQ3lBX8avBrME9VHo0RcfcE7oLVtnBAuSffy3Dk5ICUNyU7g57/rHw8d5DnO3JeitpQcTLKAInt+sEZslri3wa4Mx0xgyFW5OF3w8mNK8ib8+57PTHcApnp8xRTAlIVuwW3F/fGbSFVReS07/MulzlFXBoW/ZPLq+L2aLFpn5s+IB5/gB0HoDo5uGzRnALmXxUz8BuwJMrUE29830W7xVSEaYSYsOcJyue6PjJKyZt0rXf8TNHusXCHX240dWllrjMVxS7pEHgKb/FKfd/79PH3rXTFmuexesXS6H1lRmHBBE1iknFwtzzS+UeN22Rd6W+hjSjuOHB33o2gMS5cOdVXHuHyOQ6VJU3bJL/eNDgyB+wz3HhZmz6sF+lmLIRKP82H1QXdlwdGdpVhAhyqnE4FH4qTgPBMxv6c4jRL5BRuyUZDLeJI1WXmaZ4pNMss+MiME7Qu+7bP7S2TZhmValbfW/FvqSrxR9LlHji7iQSsz2m56x5TLjOtkFWjRxmB6C1wzBVtzdILzbvmA/1+9RlMevalW6bg22irusiv7iuD/AnC9pZ0Sju2XK/7WpjVW4/lZyBmRbqHQJPbU/5MU3xrM8pTV8rZmPfQrRh2araaWGIBE5IW3gsTrETpRUQybXd/a107ee61GwXEUqVat1EfznFpIs</eBayAuthToken>\n" +
+                "  </RequesterCredentials>\n" +
+            //    "  <LevelLimit>1</LevelLimit>\n" +
+                "</GetStoreRequest>";
+
+
+        String xml1 = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
+                "<SetStoreCategoriesRequest xmlns=\"urn:ebay:apis:eBLBaseComponents\">\n" +
+                "  <RequesterCredentials>\n" +
+                "    <eBayAuthToken>AgAAAA**AQAAAA**aAAAAA**vVcRVA**nY+sHZ2PrBmdj6wVnY+sEZ2PrA2dj6wFk4GhCpGGoA+dj6x9nY+seQ**cx0CAA**AAMAAA**Z2MB0OtmO4JsPFBZPcjclippjnZG4bwpcpXYRXDdc6wEppv5m/WiCvsjyTKWoVXCMxQl2se3U6Vn93oBL6zg8EcR3GCXCC3ZbTpEQ3lBX8avBrME9VHo0RcfcE7oLVtnBAuSffy3Dk5ICUNyU7g57/rHw8d5DnO3JeitpQcTLKAInt+sEZslri3wa4Mx0xgyFW5OF3w8mNK8ib8+57PTHcApnp8xRTAlIVuwW3F/fGbSFVReS07/MulzlFXBoW/ZPLq+L2aLFpn5s+IB5/gB0HoDo5uGzRnALmXxUz8BuwJMrUE29830W7xVSEaYSYsOcJyue6PjJKyZt0rXf8TNHusXCHX240dWllrjMVxS7pEHgKb/FKfd/79PH3rXTFmuexesXS6H1lRmHBBE1iknFwtzzS+UeN22Rd6W+hjSjuOHB33o2gMS5cOdVXHuHyOQ6VJU3bJL/eNDgyB+wz3HhZmz6sF+lmLIRKP82H1QXdlwdGdpVhAhyqnE4FH4qTgPBMxv6c4jRL5BRuyUZDLeJI1WXmaZ4pNMss+MiME7Qu+7bP7S2TZhmValbfW/FvqSrxR9LlHji7iQSsz2m56x5TLjOtkFWjRxmB6C1wzBVtzdILzbvmA/1+9RlMevalW6bg22irusiv7iuD/AnC9pZ0Sju2XK/7WpjVW4/lZyBmRbqHQJPbU/5MU3xrM8pTV8rZmPfQrRh2araaWGIBE5IW3gsTrETpRUQybXd/a107ee61GwXEUqVat1EfznFpIs</eBayAuthToken>\n" +
+                "  </RequesterCredentials>\n" +
+           //     "  <Version>449</Version>\n" +
+                "  <Action>Add</Action>\n" +
+             //   "  <ItemDestinationCategoryID>14122</ItemDestinationCategoryID>\n" +
+                "  <DestinationParentCategoryID>700388</DestinationParentCategoryID>\n" +
+                "  <StoreCategories>\n" +
+                "    <CustomCategory>\n" +
+                "      <Name>Item333</Name>\n" +
+          //      "      <Order>1</Order>\n" +
+                "    </CustomCategory>\n" +
+              /*  "    <CustomCategory>\n" +
+                "      <Name>GPS Devices</Name>\n" +
+                "      <Order>2</Order>\n" +
+                "    </CustomCategory>\n" +*/
+                "  </StoreCategories>\n" +
+                "</SetStoreCategoriesRequest>";
+        return xml;
+    }
+
+    public static String getItem(){
+        String v="<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
+                "<GetItemRequest xmlns=\"urn:ebay:apis:eBLBaseComponents\">\n" +
+                "  <RequesterCredentials>\n" +
+                "    <eBayAuthToken>AgAAAA**AQAAAA**aAAAAA**UkIjVQ**nY+sHZ2PrBmdj6wVnY+sEZ2PrA2dj6AGkYSpDpSHpQWdj6x9nY+seQ**blACAA**AAMAAA**A6QEcqWLH6811LfBd5bu+YhT85p7mJ7B+rPElj9p33mKDzRFoqiOU1ylFEDgM0XNVSr380FH9nEPPylKpYUbfcsZvvIdcyHLkT301QDOkijloFcvhyzq8GmlfzwtNraeqWks8eojyVTqNt7WA7GMF0SPhzz/+jYNn+U/ETzd3Z2qH863T++awz3TANEFU/eYN3HJ001nsgsyowXcerhVv3w7y6ww+Pklan0jwGA2p8dL8VvGAZOjnFAsUeUwiYoQ63MnhYKwVNhcQU5zAItzaViZTeS5FkBnPP/APC1lCEYJYcApVpbl4NjE2VcXuWX/Xyye8HAYrcPPG3gUUWm8fZS/2WK11qCAJBO/MI3oGsWNZ+ythDgSHyLTMQnRnOvbmsUkJdKaj0tSP7wGrXXt1NYEMzkiI9kFw4U+sN6TzMY6DIF0H33WruNX8Kl4OliTz5LV2CRg7+rO+8q/mFbGyIjhpG4zmqogDks8EkfsVh8mBfb4IW/oK/PoanC5cmA71Q2bc/y9amgdqTY51CWwfleRAhe4o3Ovu/mNe+iXsV2sMA9/vOf5Yg/6d2BVs/K8kL86z4thHb5MevU5l/pIdFZSyc6J8CbytwO7+fy0UZh7G3KrVfcGJwi+JOvgSdipVzgnZ9XKOXzeZTBq1JX/3ljMVlEi99bm88u7I1nc5vKveLAnj7G12VRC5SdEVK7UII3w7EAdXZSYoDhuAsJxQLrurzmDREvg84SYL6ay6tDUnu8gzwjE7+VDdwiQTY3j</eBayAuthToken>\n" +
+                "  </RequesterCredentials>\n" +
+                "  <ItemID>251998632630</ItemID>\n" +
+                "</GetItemRequest>";
+        return v;
+    }
+
+
+    /**打折*/
+    public static String dz(){
+        String xml="<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
+                "<SetPromotionalSaleRequest xmlns=\"urn:ebay:apis:eBLBaseComponents\">\n" +
+                "  <RequesterCredentials>\n" +
+                "    <eBayAuthToken>AgAAAA**AQAAAA**aAAAAA**vVcRVA**nY+sHZ2PrBmdj6wVnY+sEZ2PrA2dj6wFk4GhCpGGoA+dj6x9nY+seQ**cx0CAA**AAMAAA**Z2MB0OtmO4JsPFBZPcjclippjnZG4bwpcpXYRXDdc6wEppv5m/WiCvsjyTKWoVXCMxQl2se3U6Vn93oBL6zg8EcR3GCXCC3ZbTpEQ3lBX8avBrME9VHo0RcfcE7oLVtnBAuSffy3Dk5ICUNyU7g57/rHw8d5DnO3JeitpQcTLKAInt+sEZslri3wa4Mx0xgyFW5OF3w8mNK8ib8+57PTHcApnp8xRTAlIVuwW3F/fGbSFVReS07/MulzlFXBoW/ZPLq+L2aLFpn5s+IB5/gB0HoDo5uGzRnALmXxUz8BuwJMrUE29830W7xVSEaYSYsOcJyue6PjJKyZt0rXf8TNHusXCHX240dWllrjMVxS7pEHgKb/FKfd/79PH3rXTFmuexesXS6H1lRmHBBE1iknFwtzzS+UeN22Rd6W+hjSjuOHB33o2gMS5cOdVXHuHyOQ6VJU3bJL/eNDgyB+wz3HhZmz6sF+lmLIRKP82H1QXdlwdGdpVhAhyqnE4FH4qTgPBMxv6c4jRL5BRuyUZDLeJI1WXmaZ4pNMss+MiME7Qu+7bP7S2TZhmValbfW/FvqSrxR9LlHji7iQSsz2m56x5TLjOtkFWjRxmB6C1wzBVtzdILzbvmA/1+9RlMevalW6bg22irusiv7iuD/AnC9pZ0Sju2XK/7WpjVW4/lZyBmRbqHQJPbU/5MU3xrM8pTV8rZmPfQrRh2araaWGIBE5IW3gsTrETpRUQybXd/a107ee61GwXEUqVat1EfznFpIs</eBayAuthToken>\n" +
+                "  </RequesterCredentials>\n" +
+                "  <WarningLevel>High</WarningLevel>\n" +
+                "  <Action>Delete</Action>\n" +
+                "  <PromotionalSaleDetails>\n" +
+                "    <PromotionalSaleName>MyBigNYSale44</PromotionalSaleName>\n" +
+                "    <DiscountType>Price</DiscountType>\n" +
+                "    <DiscountValue>10</DiscountValue>\n" +
+                "    <PromotionalSaleType>PriceDiscountOnly</PromotionalSaleType>\n" +
+                "<PromotionalSaleID>5506695001</PromotionalSaleID>"+
+                "    <PromotionalSaleStartTime>2015-06-18T09:15:00.000Z</PromotionalSaleStartTime>\n" +
+                "    <PromotionalSaleEndTime>2015-06-25T07:16:00.000Z</PromotionalSaleEndTime>\n" +
+                "  </PromotionalSaleDetails>\n" +
+                "</SetPromotionalSaleRequest>";
+        return xml;
+    }
+    public static String dzi(){
+        String xml="<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
+                "<SetPromotionalSaleListingsRequest xmlns=\"urn:ebay:apis:eBLBaseComponents\">\n" +
+                "  <RequesterCredentials>\n" +
+                "    <eBayAuthToken>AgAAAA**AQAAAA**aAAAAA**DvBjVQ**nY+sHZ2PrBmdj6wVnY+sEZ2PrA2dj6AGkIGpAZeHowidj6x9nY+seQ**blACAA**AAMAAA**E28wlG97XwBXC20rM3pdo5q+Rw0wavD8DFrmGohaL82RkVrl1pxk6/lZsA2LC3xUh1emoUhaFt6dpy8cCHLs4brZau+bMj5tsxk9v1CM96rpD5137tyQUBwMsbRwba2TuzNIOpuhJV6HhWbC8XO/ePGuF+oZD8tGJpR7Od2CNZu2BUQhOMI7NhaUJ0HtWXDwVjydG5fR5Ru2dHsf0g9MDEQYP4Kg2FRceagRnqtOEn+KXUWzNG/H1QppO4f/OREBnkexRotxivDtpdQPrAERwAPwMHmfxKZAnZw9I/PQzzF1NaSOyPgZRkXY6v2s53QhzKlKngyxQIuGGme5GAU/oG8Wtito/rK1qeVezicg+cM/e5yjWmnvjuYDZvNaAVRyUAowNPJcjjNYvyiSEqC1Dx68q+Wxpol+XfXZuR8HUUaQqZRbnVtImeIZz9mYFg1+DB/uaYpDpuV6LanxrSBoyGR1vX61JdE736DEKdGcV/Q/G0/qmADCs1EJBoLPFQSNnn0lqdIVHCVJf7XOyoG/IQEDl7WP/BDsDZblLqXR2qp4JyvYFbOePQ9FKar82EwGKuhmheeSaFHGEVV/m7XexV+fXXuIoPtgVk0obfgvkiuOnnUDdoSlVRp8OGGRiTKXMpwzgBkktImd0D34liYWNQB3MpI/NDsURWsKN2zywH5lEzHGHDSbOLBTu+SUEpmtzaDy9KL4PQN/2GA+v0Zz3k7sS37xJO4Uai4E8GTbuwBPdI1laL7VV8Z6TaEUjXvs</eBayAuthToken>\n" +
+                "  </RequesterCredentials>\n" +
+                "  <Action>Add</Action>\n" +
+                "  <PromotionalSaleID>11025813014</PromotionalSaleID>\n" +
+                "<PromotionalSaleItemIDArray>\n" +
+                "    <ItemID>161198067922</ItemID>\n" +
+                "</PromotionalSaleItemIDArray>" +
+                "  <AllFixedPriceItems>false</AllFixedPriceItems>\n" +
+                "  <AllStoreInventoryItems>false</AllStoreInventoryItems>\n" +
+                "</SetPromotionalSaleListingsRequest>";
+        return xml;
+    }
+
+    public static String xxx(){
+        String x="<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
+                "<GetPromotionalSaleDetailsRequest xmlns=\"urn:ebay:apis:eBLBaseComponents\">\n" +
+                "  <RequesterCredentials>\n" +
+                "    <eBayAuthToken>AgAAAA**AQAAAA**aAAAAA**DvBjVQ**nY+sHZ2PrBmdj6wVnY+sEZ2PrA2dj6AGkIGpAZeHowidj6x9nY+seQ**blACAA**AAMAAA**E28wlG97XwBXC20rM3pdo5q+Rw0wavD8DFrmGohaL82RkVrl1pxk6/lZsA2LC3xUh1emoUhaFt6dpy8cCHLs4brZau+bMj5tsxk9v1CM96rpD5137tyQUBwMsbRwba2TuzNIOpuhJV6HhWbC8XO/ePGuF+oZD8tGJpR7Od2CNZu2BUQhOMI7NhaUJ0HtWXDwVjydG5fR5Ru2dHsf0g9MDEQYP4Kg2FRceagRnqtOEn+KXUWzNG/H1QppO4f/OREBnkexRotxivDtpdQPrAERwAPwMHmfxKZAnZw9I/PQzzF1NaSOyPgZRkXY6v2s53QhzKlKngyxQIuGGme5GAU/oG8Wtito/rK1qeVezicg+cM/e5yjWmnvjuYDZvNaAVRyUAowNPJcjjNYvyiSEqC1Dx68q+Wxpol+XfXZuR8HUUaQqZRbnVtImeIZz9mYFg1+DB/uaYpDpuV6LanxrSBoyGR1vX61JdE736DEKdGcV/Q/G0/qmADCs1EJBoLPFQSNnn0lqdIVHCVJf7XOyoG/IQEDl7WP/BDsDZblLqXR2qp4JyvYFbOePQ9FKar82EwGKuhmheeSaFHGEVV/m7XexV+fXXuIoPtgVk0obfgvkiuOnnUDdoSlVRp8OGGRiTKXMpwzgBkktImd0D34liYWNQB3MpI/NDsURWsKN2zywH5lEzHGHDSbOLBTu+SUEpmtzaDy9KL4PQN/2GA+v0Zz3k7sS37xJO4Uai4E8GTbuwBPdI1laL7VV8Z6TaEUjXvs</eBayAuthToken>\n" +
+                "  </RequesterCredentials>\n" +
+                "   <ErrorLanguage>en_US</ErrorLanguage>\n" +
+               // "<PromotionalSaleID>11025813014</PromotionalSaleID>"+
+                "  <PromotionalSaleStatus>Active</PromotionalSaleStatus>\n" +
+                "  <PromotionalSaleStatus>Scheduled</PromotionalSaleStatus>\n" +
+                "  <PromotionalSaleStatus>Processing</PromotionalSaleStatus>\n" +
+                "</GetPromotionalSaleDetailsRequest>";
+        return x;
+    }
+
+
+
+    public static String getReturnPoly(){
+        //ReturnPolicyDetails     ShippingServiceDetails   ShippingLocationDetails
+        String xml="<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
+                "<UploadSiteHostedPicturesRequest xmlns=\"urn:ebay:apis:eBLBaseComponents\">\n" +
+                "  <RequesterCredentials>\n" +
+                "    <eBayAuthToken>AgAAAA**AQAAAA**aAAAAA**UkIjVQ**nY+sHZ2PrBmdj6wVnY+sEZ2PrA2dj6AGkYSpDpSHpQWdj6x9nY+seQ**blACAA**AAMAAA**A6QEcqWLH6811LfBd5bu+YhT85p7mJ7B+rPElj9p33mKDzRFoqiOU1ylFEDgM0XNVSr380FH9nEPPylKpYUbfcsZvvIdcyHLkT301QDOkijloFcvhyzq8GmlfzwtNraeqWks8eojyVTqNt7WA7GMF0SPhzz/+jYNn+U/ETzd3Z2qH863T++awz3TANEFU/eYN3HJ001nsgsyowXcerhVv3w7y6ww+Pklan0jwGA2p8dL8VvGAZOjnFAsUeUwiYoQ63MnhYKwVNhcQU5zAItzaViZTeS5FkBnPP/APC1lCEYJYcApVpbl4NjE2VcXuWX/Xyye8HAYrcPPG3gUUWm8fZS/2WK11qCAJBO/MI3oGsWNZ+ythDgSHyLTMQnRnOvbmsUkJdKaj0tSP7wGrXXt1NYEMzkiI9kFw4U+sN6TzMY6DIF0H33WruNX8Kl4OliTz5LV2CRg7+rO+8q/mFbGyIjhpG4zmqogDks8EkfsVh8mBfb4IW/oK/PoanC5cmA71Q2bc/y9amgdqTY51CWwfleRAhe4o3Ovu/mNe+iXsV2sMA9/vOf5Yg/6d2BVs/K8kL86z4thHb5MevU5l/pIdFZSyc6J8CbytwO7+fy0UZh7G3KrVfcGJwi+JOvgSdipVzgnZ9XKOXzeZTBq1JX/3ljMVlEi99bm88u7I1nc5vKveLAnj7G12VRC5SdEVK7UII3w7EAdXZSYoDhuAsJxQLrurzmDREvg84SYL6ay6tDUnu8gzwjE7+VDdwiQTY3j</eBayAuthToken>\n" +
+                "  </RequesterCredentials>\n" +
+                "  <WarningLevel>High</WarningLevel>\n" +
+                "  <ExternalPictureURL>http://img.tembin.com/3196134611@qq.com/RDBH0166/1434096462095014866.jpg</ExternalPictureURL>\n" +
+                "  <PictureName>1434096462095014866</PictureName>\n" +
+                "</UploadSiteHostedPicturesRequest>";
+        return xml;
+    }
+
+    public static String getRuleXml(){
+        String xml="<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
+                "<GetApiAccessRulesRequest xmlns=\"urn:ebay:apis:eBLBaseComponents\">\n" +
+                "  <RequesterCredentials>\n" +
+                "    <eBayAuthToken>AgAAAA**AQAAAA**aAAAAA**5cSjVA**nY+sHZ2PrBmdj6wVnY+sEZ2PrA2dj6AFloGjCpeFpgidj6x9nY+seQ**blACAA**AAMAAA**0xQXw/Dcj+x35la1HXBeIPwHaZkIIoqXvkUWxgPNIB49N5zrwDhXjiCk1Pg9rj2Lpj8tMmViAGHbXGPb0U7cd9AjL59a4wVa8ipm0mKqrSHbW6fEizvMMf0OMD7mg6J5V7WQze9gM0hVJ/4Vf3FoL6V3m5qVUsDZb++Ya91WqczmBBfO7m5NgKu992vhkLjg2vieItQx8QcCT9ZCYTk6pGpLAvho/a7CgOjwtxvqlMyJ9z/1ZM0EhMn9dJjf9qjbAuDg4BvACr4puGFks0/sOXDS09BENr+iYZrzQHkxlat+c50QhgooBsdeAAwcuwpYcHJm/HSkLhx+O+u+dT+br/T4XqXmHO9lnG9GET3kYtUWHOAt1EXQSvO5nqSVqSvepCOj5pZnZptZtan+PkE6AOul3csdt0lWeeu2q6yHXx+RItfHwKMrp8CZ8PGsgqVb2zZBDyXqEP4ZLdxhrDxc+5euK+wvGb0LLg1k/OcmexY0zRha34AI9q+e0pk2l4pFFFm99vAtqnAIlGC1Wb0IdApzyIsAvZCl5y1hY39LwhwEhgafkr74kuill3zpX0iQxpFVx1iW4eDKRh404MjG91A/svzHAPIZ6OhfFa+JqqXdqqczjzmbjD9qF34Y2Pv/a3LgG/puewxfg2XFl0xFCarWJePsnhAHYRvksrt0WQEOgpGSQg03uU7rDCADcMc+R78KMm4dXZ3vVQgE7JX1oUlfDGrveaIrkxzQyHznFjzrXtBWazfllAZ7T8NiL7Gb</eBayAuthToken>\n" +
+                "  </RequesterCredentials>\n" +
+                "</GetApiAccessRulesRequest>";
+        return xml;
+    }
+
+    public static String getEbayUserInfo(){
+        String xml="<?xml version=\"1.0\" encoding=\"utf-8\"?>" +
+                "<GetOrdersRequest xmlns=\"urn:ebay:apis:eBLBaseComponents\">" +
+                "  <RequesterCredentials>" +
+                "<eBayAuthToken>AgAAAA**AQAAAA**aAAAAA**UkIjVQ**nY+sHZ2PrBmdj6wVnY+sEZ2PrA2dj6AGkYSpDpSHpQWdj6x9nY+seQ**blACAA**AAMAAA**A6QEcqWLH6811LfBd5bu+YhT85p7mJ7B+rPElj9p33mKDzRFoqiOU1ylFEDgM0XNVSr380FH9nEPPylKpYUbfcsZvvIdcyHLkT301QDOkijloFcvhyzq8GmlfzwtNraeqWks8eojyVTqNt7WA7GMF0SPhzz/+jYNn+U/ETzd3Z2qH863T++awz3TANEFU/eYN3HJ001nsgsyowXcerhVv3w7y6ww+Pklan0jwGA2p8dL8VvGAZOjnFAsUeUwiYoQ63MnhYKwVNhcQU5zAItzaViZTeS5FkBnPP/APC1lCEYJYcApVpbl4NjE2VcXuWX/Xyye8HAYrcPPG3gUUWm8fZS/2WK11qCAJBO/MI3oGsWNZ+ythDgSHyLTMQnRnOvbmsUkJdKaj0tSP7wGrXXt1NYEMzkiI9kFw4U+sN6TzMY6DIF0H33WruNX8Kl4OliTz5LV2CRg7+rO+8q/mFbGyIjhpG4zmqogDks8EkfsVh8mBfb4IW/oK/PoanC5cmA71Q2bc/y9amgdqTY51CWwfleRAhe4o3Ovu/mNe+iXsV2sMA9/vOf5Yg/6d2BVs/K8kL86z4thHb5MevU5l/pIdFZSyc6J8CbytwO7+fy0UZh7G3KrVfcGJwi+JOvgSdipVzgnZ9XKOXzeZTBq1JX/3ljMVlEi99bm88u7I1nc5vKveLAnj7G12VRC5SdEVK7UII3w7EAdXZSYoDhuAsJxQLrurzmDREvg84SYL6ay6tDUnu8gzwjE7+VDdwiQTY3j</eBayAuthToken>\n" +
+                "  </RequesterCredentials>" +
+
+             //   "  <ModTimeFrom>"+"2015-07-14T04:00:00.000Z"+"</ModTimeFrom>" +
+               // "  <ModTimeTo>"+"2015-07-22T03:59:59.000Z"+"</ModTimeTo>" +
+                "<CreateTimeFrom>"+"2015-07-23T00:00:00.087Z"+"</CreateTimeFrom>" +
+                "<CreateTimeTo>"+"2015-07-25T23:38:32.087Z"+"</CreateTimeTo>"+
+                "<OrderRole>Seller</OrderRole>" +
+                "<OrderStatus>All</OrderStatus>"+
+             //   "<OrderIDArray>" +
+             //   "    <OrderID>251862468262-1685257833015</OrderID>\n" +
+             //   "  </OrderIDArray>"+
+                "<Pagination>" +
+                "<EntriesPerPage>10</EntriesPerPage>" +
+                "<PageNumber>"+1+"</PageNumber>" +
+                "</Pagination>"+
+                "<DetailLevel>ReturnAll</DetailLevel>"+
+                "</GetOrdersRequest>";
+        return xml;
+    }
+
+    private String getStorexml(){
+        String xml="<?xml version=\"1.0\" encoding=\"utf-8\"?>" +
+                "<GetOrderTransactionsRequest xmlns=\"urn:ebay:apis:eBLBaseComponents\"> " +
+                " <RequesterCredentials>    " +
+                "<eBayAuthToken>AgAAAA**AQAAAA**aAAAAA**UkIjVQ**nY+sHZ2PrBmdj6wVnY+sEZ2PrA2dj6AGkYSpDpSHpQWdj6x9nY+seQ**blACAA**AAMAAA**A6QEcqWLH6811LfBd5bu+YhT85p7mJ7B+rPElj9p33mKDzRFoqiOU1ylFEDgM0XNVSr380FH9nEPPylKpYUbfcsZvvIdcyHLkT301QDOkijloFcvhyzq8GmlfzwtNraeqWks8eojyVTqNt7WA7GMF0SPhzz/+jYNn+U/ETzd3Z2qH863T++awz3TANEFU/eYN3HJ001nsgsyowXcerhVv3w7y6ww+Pklan0jwGA2p8dL8VvGAZOjnFAsUeUwiYoQ63MnhYKwVNhcQU5zAItzaViZTeS5FkBnPP/APC1lCEYJYcApVpbl4NjE2VcXuWX/Xyye8HAYrcPPG3gUUWm8fZS/2WK11qCAJBO/MI3oGsWNZ+ythDgSHyLTMQnRnOvbmsUkJdKaj0tSP7wGrXXt1NYEMzkiI9kFw4U+sN6TzMY6DIF0H33WruNX8Kl4OliTz5LV2CRg7+rO+8q/mFbGyIjhpG4zmqogDks8EkfsVh8mBfb4IW/oK/PoanC5cmA71Q2bc/y9amgdqTY51CWwfleRAhe4o3Ovu/mNe+iXsV2sMA9/vOf5Yg/6d2BVs/K8kL86z4thHb5MevU5l/pIdFZSyc6J8CbytwO7+fy0UZh7G3KrVfcGJwi+JOvgSdipVzgnZ9XKOXzeZTBq1JX/3ljMVlEi99bm88u7I1nc5vKveLAnj7G12VRC5SdEVK7UII3w7EAdXZSYoDhuAsJxQLrurzmDREvg84SYL6ay6tDUnu8gzwjE7+VDdwiQTY3j</eBayAuthToken>  </RequesterCredentials> " +
+                " <OrderIDArray><OrderID>221380870702-1515428272012</OrderID>  </OrderIDArray></GetOrderTransactionsRequest>";
+        return xml;
+    }
+
+private String getXml(){
+    String xml = "<?xml version=\"1.0\" encoding=\"utf-8\"?>" +
+            "<GetCategorySpecificsRequest xmlns=\"urn:ebay:apis:eBLBaseComponents\">" +
+            "<RequesterCredentials>" +
+          //  "<eBayAuthToken>AgAAAA**AQAAAA**aAAAAA**wV1JUQ**nY+sHZ2PrBmdj6wVnY+sEZ2PrA2dj6wFk4GhCpGGoA+dj6x9nY+seQ**cx0CAA**AAMAAA**2kuzIn+bBej1QDsDFfI2N74mj8psZYNYrtgX97fzWSGXO7EjvdlE9leu9HCY1bR9wdrzlAE7AKcT9Oz5BDNZbNQLS+uoifmNUM47lSqxWeYTQS2GtMK25LPYhxY+OQp6UVZ8lUh6Oqr91ub03emzufuZHo+6KSNJfNXMtOBVaB7PDeBQyNWoFBO0/LYiS5ql6HXB7vCj0W+K/iT4t3aPs5KlXAXjewM/Sa+nUDtjT9SseqrKrxdZx5fkAePeSrBs229tdCrkTtE0n+ZE9ppwJjElZpu7yfQL44McNa16KBxYYO0PnX7ENg2yMxf3H4aji0BEfB41lrC1LwhmNSebJGrJXRQVS9jmZyDqYiBdn1t536va/LPTP8kc3GZ7hnZRJuhMxoGGgx4ev5Hip0L7dk6cAPKHIkHUIjfA5pwVHEJZpvea+7uvwAh5pj9U7r6rmB9FXH2G9l+F5SytYlIXsDjwNtrEN53k5HrM0vhnGdd7pUwvyu7Nu4U5aPkZQZjTr6OrTWioDsZZwEz+pf0scw0IYweMhicCqMTNbvkJsj2cikX49C6XSAcoUyrGtGa11vFChrifmq74dPZmUEtT1hDtwL1Ix3VPyZcJtTukKljxa0W0IwIe676X5HmiGhvk5qPPUImkXcZdQUK1gMdZmw0seMl5xmFG33kKVSD9H0p0JAEF4lOcDvjADQZtwLXY3qIhvYcKdOrIffrUAURnJRYnrB/MixizWvw252xBn9tmxpm68O3KsGBzcUwEB0Su</eBayAuthToken>" +
+            "    <eBayAuthToken>AgAAAA**AQAAAA**aAAAAA**37omVQ**nY+sHZ2PrBmdj6wVnY+sEZ2PrA2dj6wFlIuiAJOGpQ+dj6x9nY+seQ**5WkBAA**AAMAAA**kDTxxC4waH1/74fa1riV5NH1YVU4kvxgV4YLTxru9+WV8IH4BtVf58qkmezLFpvimXPAhXSY1u69mWS5CD7ZsA59wvOYqqKxBzUrDwf5CIFJzno+y7dTTVmlCzWHvNACDkXqqXKpOxrX4HURBdMwZOwK2d4sUooUpELIUaFpNQij1IMha1tgMdsPnRXJx949TG1KpTchWMz983T69zuwyl7MwpmG2VUzmhMKSowM/Z8sMVMCG3pbUXu04z3DdJ+6RVVfelbLlQxPYwVf1wzoyt9hK45+5NayRbEunLXjFqZ6bCOKx1dn4caxFb2UGqRGN5ctm8rrKGLpGMy85DZAQtDrMqEVhEZXFUbwBaK5Mh1AUXJAmAPrMnrjJl83t9ZpO9KdFHHkIU+vTbA7WNxOE9l/F6+WJBv+kVygb3MA3a5foZemjiVXGPTJfurthdnkYRklfbgMUEAjazj/mFUMNvxRJ/1Myx32xbUTND7x/AEnzYN/lc+jWu3k42fy1+SGh4BaDph6vQZ6b5rsFABj0lhtgdrXh0HYv9/AaC+R9TdsrXUGwNVdk4dIR9PgiBjzoF9MXb5Ds1mwt7EeZG7GmTu9V9ZiPPUwtYi8tQzqq8fpD2aDoSHkfET+DCgY1nTBO8+aaNDkwUO4yEQHUpkPbPKXkycWdNFtfTP0L0eckxk/Kx3mGKrR5JwPh4iFAt+cwl4gtTr7dfMTkydmz7EruUpYHgKGi/6q75cWLC4U3zOcy6dKnpllS9me06Do2Dt+</eBayAuthToken>\n" +
+            "</RequesterCredentials>" +
+            "<CategorySpecificsFileInfo>true</CategorySpecificsFileInfo>" +
+            "</GetCategorySpecificsRequest>​";
+    return xml;
+}
+
+
+  // @Test
+    public void test1() throws Exception {
+    JaxWsProxyFactoryBean factory = new JaxWsProxyFactoryBean();
+    factory.setServiceClass(PostApiService.class);
+    factory.setAddress("http://192.168.0.241:8080/postApi/ws/postApiService?wsdl");
+    PostApiService client= (PostApiService) factory.create();
+    CXFClientRequestVO cxfClientRequestVO=new CXFClientRequestVO();
+    cxfClientRequestVO.setXml("dfdfd");
+
+
+    List<BasicHeader> headers = new ArrayList<BasicHeader>();
+    headers.add(new BasicHeader("X-EBAY-SOA-OPERATION-NAME", "kh"));
+    headers.add(new BasicHeader("X-EBAY-SOA-SECURITY-TOKEN ", "kh"));
+    headers.add(new BasicHeader("X-EBAY-SOA-REQUEST-DATA-FORMAT", "hk"));
+    headers.add(new BasicHeader("X-EBAY-SOA-SERVICE-NAME", "kh"));
+    headers.add(new BasicHeader("X-EBAY-SOA-SERVICE-VERSION", "hk"));
+    headers.add(new BasicHeader("X-EBAY-SOA-GLOBAL-ID", "khh"));
+    cxfClientRequestVO.setHeaders(ApiHeader.header2Map(headers) );
+
+
+    String result =client.postApi(cxfClientRequestVO);
+    System.out.println(result);
+    }
+
+   // @Test
+    public void postTest()throws Exception{
+        //https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=APPID&secret=APPSECRET
+        //获取accesstoken
+        //accesskey : {"userMark":"caixu","thirdPartMark":"ggg"}     thirdPartUser
+        String a="{" + "\"button\":[{" +
+                "          \"type\":\"view\"," +
+                "          \"name\":\"测试中\"," +
+                "          \"url\":\"http://www.tembin.com/\"" +
+                "      }," +
+                "      {" +
+                "           \"name\":\"菜单\"," +
+                "           \"sub_button\":[" +
+                "           {" +
+                "               \"type\":\"view\"," +
+                "               \"name\":\"tembin\"," +
+                "               \"url\":\"http://www.tembin.com/\"" +
+                "            }," +
+                "            {" +
+                "               \"type\":\"view\"," +
+                "               \"name\":\"视频\"," +
+                "               \"url\":\"http://www.tembin.com/\"" +
+                "            }," +
+                "            {" +
+                "               \"type\":\"click\"," +
+                "               \"name\":\"赞一下我们\"," +
+                "               \"key\":\"V1001_GOOD\"" +
+                "            }]" +
+                "       }]" +
+                " }";
+        HttpClient httpClient= HttpClientUtil.getHttpsClient();
+        String res= HttpClientUtil.post(httpClient, "https://api.weixin.qq.com/cgi-bin/menu/create?access_token=rFs3K5aL2z4KB9P2HoUvb6K2xpXFXp4L_iHMo4Lh7WPzhW5P2UmPyw9LVbSJm98XHSBV9Yay-FmmlDqMIysgqYiBrOD2jGcO8eUDftFA81U",
+                a, "UTF-8", null);
+        System.out.println(res);
+    }
+
+
+
+
+
+
+
+
+
+}

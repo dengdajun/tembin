@@ -1,0 +1,152 @@
+
+import com.base.utils.httpclient.HttpClientUtil;
+import com.base.utils.scheduleabout.Scheduledable;
+import net.spy.memcached.AddrUtil;
+import net.spy.memcached.BinaryConnectionFactory;
+import net.spy.memcached.MemcachedClient;
+import net.spy.memcached.internal.OperationFuture;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.http.client.HttpClient;
+import org.apache.http.message.BasicNameValuePair;
+import org.reflections.Reflections;
+import org.reflections.scanners.MethodAnnotationsScanner;
+import org.reflections.scanners.Scanner;
+import org.reflections.scanners.SubTypesScanner;
+import org.reflections.scanners.TypeAnnotationsScanner;
+import org.springframework.util.DigestUtils;
+
+import java.io.File;
+import java.text.MessageFormat;
+import java.util.*;
+
+/**
+ * Created by Administrator on 2015/5/20.
+ */
+public class MyTest {
+
+    public static void main(String[] args) throws Exception {
+        String str1 = "大秦 {0} {1} {2}";
+        System.out.println(MessageFormat.format(str1, "将军", "梦回", "秦朝"));
+       // DigestUtils.md5DigestAsHex("testmima20120701231212")
+        //timeTest111();
+        System.out.println("===");
+    }
+
+    public static void timeTest111() throws Exception{
+        HttpClient httpClient= HttpClientUtil.getHttpClient();
+        /*List<BasicNameValuePair> nvps = new ArrayList<BasicNameValuePair>();
+        nvps.add(new BasicNameValuePair("action","send"));
+        nvps.add(new BasicNameValuePair("userid","655"));
+        nvps.add(new BasicNameValuePair("account","HY_AtJob"));
+        nvps.add(new BasicNameValuePair("password","123456"));
+        nvps.add(new BasicNameValuePair("mobile","13550329026"));
+        nvps.add(new BasicNameValuePair("content","testest"));
+        nvps.add(new BasicNameValuePair("sendTime",""));
+        nvps.add(new BasicNameValuePair("extno",""));*/
+        String t="20160331231213";
+        String tt=DigestUtils.md5DigestAsHex(("scdyygd123456qaz"+t).getBytes());
+        List<BasicNameValuePair> nvpsSt = new ArrayList<BasicNameValuePair>();
+        nvpsSt.add(new BasicNameValuePair("action","send"));
+        nvpsSt.add(new BasicNameValuePair("userid","68"));
+        nvpsSt.add(new BasicNameValuePair("timestamp",t));
+        nvpsSt.add(new BasicNameValuePair("sign",tt));
+        nvpsSt.add(new BasicNameValuePair("mobile","13550329026"));
+        nvpsSt.add(new BasicNameValuePair("content","【管道专家】尊敬的客户， 您正在登录管道专家服务，您的验证码是【变量】请勿泄露，感谢您使用。如有异常登陆，请联系028-86646808"));
+        nvpsSt.add(new BasicNameValuePair("sendTime",""));
+
+
+        String res = HttpClientUtil.postWithParam(httpClient,
+                "http://hyt.uewang.net/v2sms.aspx",
+                //"http://115.29.49.158/callApi.aspx",
+                nvpsSt,
+                null, "UTF-8", null);
+        System.out.println(res);
+    }
+
+
+    /**查询短信余额*/
+    //@Test
+    public void timeTest() throws Exception{
+        HttpClient httpClient= HttpClientUtil.getHttpClient();
+        /*List<BasicNameValuePair> nvps = new ArrayList<BasicNameValuePair>();
+        nvps.add(new BasicNameValuePair("action","send"));
+        nvps.add(new BasicNameValuePair("userid","655"));
+        nvps.add(new BasicNameValuePair("account","HY_AtJob"));
+        nvps.add(new BasicNameValuePair("password","123456"));
+        nvps.add(new BasicNameValuePair("mobile","13550329026"));
+        nvps.add(new BasicNameValuePair("content","testest"));
+        nvps.add(new BasicNameValuePair("sendTime",""));
+        nvps.add(new BasicNameValuePair("extno",""));*/
+
+        List<BasicNameValuePair> nvpsSt = new ArrayList<BasicNameValuePair>();
+        nvpsSt.add(new BasicNameValuePair("action","overage"));
+        nvpsSt.add(new BasicNameValuePair("userid","655"));
+        nvpsSt.add(new BasicNameValuePair("account","HY_AtJob"));
+        nvpsSt.add(new BasicNameValuePair("password","123456"));
+
+
+        String res = HttpClientUtil.postWithParam(httpClient,
+                "http://115.29.49.158/sms.aspx",
+                //"http://115.29.49.158/callApi.aspx",
+                nvpsSt,
+                null, "UTF-8", null);
+        System.out.println(res);
+    }
+
+    //@Test
+    public void hhh(){
+        Scanner[] scanners = {new TypeAnnotationsScanner(), new SubTypesScanner(), new MethodAnnotationsScanner()};
+        Reflections reflections = new Reflections("com.base.utils.scheduleabout", scanners);
+        Set<Class<? extends Scheduledable>> classSet = reflections.getSubTypesOf(Scheduledable.class);
+        String x="";
+
+    }
+
+
+    /**ocs测试*/
+   // @Test
+    public void ocsTest() throws Exception{
+        final String host = "192.168.1.241"; //控制台上的“内网地址”
+        final String port = "11211"; //默认端口 11211，不用改
+        MemcachedClient cache = null;
+        try {
+
+            cache = new MemcachedClient(new BinaryConnectionFactory(), AddrUtil.getAddresses(host + ":" + port));
+            System.out.println("查看:" + cache.get("ocs"));
+            System.out.println("OCS Sample Code");
+
+            //向OCS中存一个key为"ocs"的数据，便于后面验证读取数据
+            OperationFuture future = (OperationFuture) cache.set("ocs", 10, " VVVOpen Cache Service,  from www.Aliyun.com");
+
+            //向OCS中存若干个数据，随后可以在OCS控制台监控上看到统计信息
+            for (int i = 0; i < 100; i++) {
+                String key = "key-" + i;
+                String value = "value-" + i;
+
+                //执行set操作，向缓存中存数据
+                cache.set(key, 1000, value);
+            }
+
+            System.out.println("Set操作完成!");
+
+            future.get(); //  确保之前(mc.set())操作已经结束
+
+            //执行get操作，从缓存中读数据,读取key为"ocs"的数据
+            System.out.println("Get操作:" + cache.get("ocs"));
+
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        if (cache != null) {
+            cache.shutdown();        }
+
+
+    }
+
+
+
+
+}
